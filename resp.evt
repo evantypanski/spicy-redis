@@ -1,0 +1,3 @@
+protocol analyzer spicy::RESP over TCP:
+    parse with RESP::Data,
+    port 56379/tcp;
