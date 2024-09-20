@@ -1,3 +1,8 @@
 protocol analyzer spicy::RESP over TCP:
     parse with RESP::Data,
     port 56379/tcp;
+
+import RESP;
+import Zeek_RESP;
+
+on RESP::Data -> event resp::data($conn, Zeek_RESP::create_data(self));
