@@ -1,7 +1,5 @@
 module RESP;
 
-import spicy;
-
 public type Data = unit {
     ty: uint8 &convert=DataType($$);
     switch ( self.ty ) {
