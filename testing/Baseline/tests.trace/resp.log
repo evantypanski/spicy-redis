@@ -5,7 +5,10 @@
 #unset_field	-
 #path	resp
 #open XXXX-XX-XX-XX-XX-XX
-#fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	request	reply
-#types	time	string	addr	port	addr	port	string	string
-XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	127.0.0.1	64091	127.0.0.1	12345	Hello, Spicy!	Hello, back!
+#fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	resp_data.simple_string	resp_data.simple_error	resp_data.i	resp_data.bulk_string	resp_data.is_null	resp_data.boolean	resp_data.big_num	resp_data.bulk_error	resp_data.verbatim_string
+#types	time	string	addr	port	addr	port	string	string	int	string	bool	bool	string	string	string
+XXXXXXXXXX.XXXXXX	CHhAvVGS1DHFjwGM9	86.105.54.80	36400	46.101.120.100	56379	-	-	-	-	F	-	-	-	-
+XXXXXXXXXX.XXXXXX	C4J4Th3PJpwUYZZ6gc	86.105.54.80	37376	46.101.120.100	56379	-	-	-	-	F	-	-	-	-
+XXXXXXXXXX.XXXXXX	CtPZjS20MLrsMUOJi2	86.105.54.80	37378	46.101.120.100	56379	-	-	-	-	F	-	-	-	-
+XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	172.17.0.3	58042	46.101.120.100	56379	-	-	-	-	F	-	-	-	-
 #close XXXX-XX-XX-XX-XX-XX

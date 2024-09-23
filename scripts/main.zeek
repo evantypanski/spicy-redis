@@ -58,36 +58,36 @@ redef likely_server_ports += { ports };
 #
 # function get_file_handle(c: connection, is_orig: bool): string
 #	{
-#	return cat(Analyzer::ANALYZER_RESP, c$start_time, c$id, is_orig);
+#	return cat(Analyzer::ANALYZER_SPICY_RESP, c$start_time, c$id, is_orig);
 #	}
 
 event zeek_init() &priority=5
 	{
 	Log::create_stream(RESP::LOG, [$columns=Info, $ev=log_resp, $path="resp", $policy=log_policy]);
 
-	Analyzer::register_for_ports(Analyzer::ANALYZER_RESP, ports);
+	Analyzer::register_for_ports(Analyzer::ANALYZER_SPICY_RESP, ports);
 
 	# TODO: To activate the file handle function above, uncomment this.
-	# Files::register_protocol(Analyzer::ANALYZER_RESP, [$get_file_handle=RESP::get_file_handle ]);
+	# Files::register_protocol(Analyzer::ANALYZER_SPICY_RESP, [$get_file_handle=RESP::get_file_handle ]);
 	}
 
 # Initialize logging state.
 hook set_session(c: connection)
 	{
-	if ( c?$resp )
+	if ( c?$redis_resp )
 		return;
 
-	c$resp = Info($ts=network_time(), $uid=c$uid, $id=c$id);
+	c$redis_resp = Info($ts=network_time(), $uid=c$uid, $id=c$id);
 	Conn::register_removal_hook(c, finalize_resp);
 	}
 
 function emit_log(c: connection)
 	{
-	if ( ! c?$resp )
+	if ( ! c?$redis_resp )
 		return;
 
-	Log::write(RESP::LOG, c$resp);
-	delete c$resp;
+	Log::write(RESP::LOG, c$redis_resp);
+	delete c$redis_resp;
 	}
 
 # Example event defined in resp.evt.
@@ -95,7 +95,7 @@ event RESP::data(c: connection, payload: RESPData)
 	{
 	hook set_session(c);
 
-	local info = c$resp;
+	local info = c$redis_resp;
     info$resp_data = payload;
 	}
 
