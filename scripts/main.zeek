@@ -8,9 +8,22 @@ export {
 
 	## The ports to register RESP for.
 	const ports = {
-		# TODO: Replace with actual port(s).
-		12345/tcp,
+		56379/tcp,
 	} &redef;
+
+    type RESPData: record {
+        simple_string: string &optional &log;
+        simple_error: string &optional &log;
+        i: int &optional &log;
+        bulk_string: string &optional &log;
+        #array:
+        is_null: bool &log;
+        boolean: bool &optional &log;
+        #double_: double &optional;
+        big_num: string &optional &log;
+        bulk_error: string &optional &log;
+        verbatim_string: string &optional &log;
+    };
 
 	## Record type containing the column fields of the RESP log.
 	type Info: record {
@@ -20,13 +33,7 @@ export {
 		uid: string &log;
 		## The connection's 4-tuple of endpoint addresses/ports.
 		id: conn_id &log;
-
-		# TODO: Adapt subsequent fields as needed.
-
-		## Request-side payload.
-		request: string &optional &log;
-		## Response-side payload.
-		reply: string &optional &log;
+        resp_data: RESPData &log;
 	};
 
 	## A default logging policy hook for the stream.
@@ -40,7 +47,7 @@ export {
 }
 
 redef record connection += {
-	resp: Info &optional;
+	redis_resp: Info &optional;
 };
 
 redef likely_server_ports += { ports };
@@ -84,20 +91,15 @@ function emit_log(c: connection)
 	}
 
 # Example event defined in resp.evt.
-event RESP::data(c: connection, is_orig: bool, payload: string)
+event RESP::data(c: connection, payload: RESPData)
 	{
 	hook set_session(c);
 
 	local info = c$resp;
-	if ( is_orig )
-		info$request = payload;
-	else
-		info$reply = payload;
+    info$resp_data = payload;
 	}
 
 hook finalize_resp(c: connection)
 	{
-	# TODO: For UDP protocols, you may want to do this after every request
-	# and/or reply.
 	emit_log(c);
 	}
