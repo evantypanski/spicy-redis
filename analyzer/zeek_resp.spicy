@@ -24,7 +24,7 @@ type ZeekData = tuple<
     #optional<vector<ZeekData>>, # TODO: This segfaults because recursive type :(
     bool,
     optional<bool>,
-    #optional<real>, # TODO: How to convert real to zeek double?
+    optional<real>,
     optional<string>, 
     optional<bytes>, 
     optional<bytes>, 
@@ -69,5 +69,5 @@ public function create_data(data: RESP::Data): ZeekData {
         bulk_error = data.bulk_error.content;
     if (data?.verbatim_string)
         verbatim_string = data.verbatim_string.content;
-    return (simple_string, simple_error, i, bulk_string, null, boolean, big_num, bulk_error, verbatim_string);
+    return (simple_string, simple_error, i, bulk_string, null, boolean, double, big_num, bulk_error, verbatim_string);
 }

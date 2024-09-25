@@ -19,7 +19,7 @@ export {
         #array:
         is_null: bool &log;
         boolean: bool &optional &log;
-        #double_: double &optional;
+        double_: double &optional &log;
         big_num: string &optional &log;
         bulk_error: string &optional &log;
         verbatim_string: string &optional &log;
