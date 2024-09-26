@@ -4,10 +4,27 @@ Parses the [Redis serialization protocol](https://redis.io/docs/latest/develop/r
 
 ## Usage
 
-Currently, the package sucks. The following is usage from the `analyzer` directory:
+Common usage within Zeek.
 
-1) Grab a PCAP (like [redis.pcap](https://github.com/macbre/data-flow-graph/blob/master/sources/pcap/redis.pcap))
-2) Compile the code so Zeek can use it: `spicyz -o resp.hlto resp.spicy resp.evt zeek_analyzer.spicy`
-3) See some output via Zeek: `zeek -C -r redis.pcap resp.hlto`
+First, build the analyzer:
 
-This will be updated as it's better :)
+```
+$ mkdir build && cd build
+$ cmake .. -G Ninja
+$ ninja install
+```
+
+You should now see the spicy analyzer via `zeek`:
+
+```
+$ zeek -NN | grep RESP
+    [Analyzer] spicy_RESP (ANALYZER_SPICY_RESP, enabled)
+```
+
+### Creating RESP traffic
+
+You can easily create RESP traffic by grabbing the [redis CLI](https://redis.io/docs/latest/develop/connect/cli/). Just start a server with `redis-server` and connect to it with `redis-cli`. That will use the default port (6379) recognized by the provided Zeek script.
+
+You can also create a [free REDIS server](https://redis.io/try-free/) and use that traffic, albeit on a provided port. There is also a "private" authorization that will be shown in the traffic.
+
+When connecting via `redis-cli`, all commands are just sent as bulk strings in an array. So, all commands just get serialized via RESP.

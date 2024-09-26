@@ -1,6 +1,6 @@
 protocol analyzer spicy::RESP over TCP:
     parse with RESP::Messages,
-    port 56379/tcp;
+    port 6379/tcp;
 
 import RESP;
 import Zeek_RESP;
