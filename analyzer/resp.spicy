@@ -1,5 +1,9 @@
 module RESP;
 
+public type Messages = unit {
+    : Data[];
+};
+
 public type Data = unit {
     ty: uint8 &convert=DataType($$);
     switch ( self.ty ) {

@@ -1,5 +1,5 @@
 protocol analyzer spicy::RESP over TCP:
-    parse with RESP::Data,
+    parse with RESP::Messages,
     port 56379/tcp;
 
 import RESP;
