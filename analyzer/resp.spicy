@@ -1,10 +1,15 @@
 module RESP;
 
 public type Messages = unit {
-    : Data[];
+    : (Data &synchronize)[];
 };
 
 public type Data = unit {
+    # TODO: Spicy issue #1875: When that's fixed, maybe try to use %synchronize-after
+    # Then the skip-pre can be removed
+    #%synchronize-after=b"\x0d\x0a";
+    %synchronize-at=b"\x0d\x0a";
+    %skip-pre = /\x0d\x0a/;
     ty: uint8 &convert=DataType($$);
     switch ( self.ty ) {
         DataType::SIMPLE_STRING -> simple_string: SimpleString(False);
