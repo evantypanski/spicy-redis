@@ -9,7 +9,6 @@ export {
 	## The ports to register RESP for.
 	const ports = {
 		6379/tcp,
-		56379/tcp,
 	} &redef;
 
     type RESPData: record {
