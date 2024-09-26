@@ -8,7 +8,6 @@ import zeek;
 
 # Any error bubbling up to the top unit will trigger a protocol rejection.
 on RESP::Data::%done {
-    print self;
     zeek::confirm_protocol();
 }
 

@@ -41,9 +41,6 @@ export {
 
 	## Default hook into RESP logging.
 	global log_resp: event(rec: Info);
-
-	## RESP finalization hook.
-	global finalize_resp: Conn::RemovalHook;
 }
 
 redef record connection += {
@@ -78,7 +75,6 @@ hook set_session(c: connection)
 		return;
 
 	c$redis_resp = Info($ts=network_time(), $uid=c$uid, $id=c$id);
-	Conn::register_removal_hook(c, finalize_resp);
 	}
 
 function emit_log(c: connection)
@@ -92,14 +88,10 @@ function emit_log(c: connection)
 
 # Example event defined in resp.evt.
 event RESP::data(c: connection, payload: RESPData)
-	{
-	hook set_session(c);
+    {
+    hook set_session(c);
 
-	local info = c$redis_resp;
+    local info = c$redis_resp;
     info$resp_data = payload;
-	}
-
-hook finalize_resp(c: connection)
-	{
-	emit_log(c);
-	}
+    emit_log(c);
+    }
