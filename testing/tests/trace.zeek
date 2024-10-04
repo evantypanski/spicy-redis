@@ -4,7 +4,7 @@
 # @TEST-EXEC: btest-diff output
 # @TEST-EXEC: btest-diff resp.log
 
-event RESP::data(c: connection, payload: RESP::RESPData)
+event RESP::data(c: connection, is_orig: bool, payload: RESP::RESPData)
     {
     print fmt("Testing RESP: %s", payload);
     }

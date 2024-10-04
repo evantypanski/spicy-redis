@@ -7,7 +7,7 @@
 # Testing the example of pub sub in REDIS docs:
 # https://redis.io/docs/latest/develop/interact/pubsub/
 # These are just commands between two different clients, one PUBLISH and one SUBSCRIBE.
-event RESP::data(c: connection, payload: RESP::RESPData)
+event RESP::data(c: connection, is_orig: bool, payload: RESP::RESPData)
     {
     print fmt("Testing RESP pubsub response: %s", payload);
     }

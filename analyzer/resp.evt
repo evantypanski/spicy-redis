@@ -5,4 +5,6 @@ protocol analyzer spicy::RESP over TCP:
 import RESP;
 import Zeek_RESP;
 
-on RESP::Data -> event RESP::data($conn, Zeek_RESP::create_data(self));
+on RESP::Data -> event RESP::data($conn, $is_orig, Zeek_RESP::create_data(self));
+
+on RESP::Array if ( Zeek_RESP::is_set(self) ) -> event RESP::set_command($conn, $is_orig, Zeek_RESP::make_set(self));

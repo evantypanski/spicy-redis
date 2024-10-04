@@ -70,3 +70,28 @@ public function create_data(data: RESP::Data): ZeekData {
         verbatim_string = data.verbatim_string.content;
     return (simple_string, simple_error, i, bulk_string, null, boolean, double, big_num, bulk_error, verbatim_string);
 }
+
+type Set = tuple<
+    bytes,
+    bytes,
+>;
+
+public function make_set(arr: RESP::Array): Set {
+    # Assume it's been validated
+    return (arr.elements[1].bulk_string.content, arr.elements[2].bulk_string.content);
+}
+
+public function is_set(arr: RESP::Array): bool {
+    if (arr.num_elements < 3)
+        return False;
+
+
+    local first = arr.elements[0];
+    # SET is 3 bulk strings. Well there could be more but for now..
+    if (!first?.bulk_string || !arr.elements[1]?.bulk_string || !arr.elements[2]?.bulk_string)
+        return False;
+    if (first.bulk_string.length != 3)
+        return False;
+
+    return first.bulk_string.content == b"set" || first.bulk_string.content == b"SET";
+}

@@ -25,6 +25,11 @@ export {
         verbatim_string: string &optional &log;
     };
 
+    type SetCommand: record {
+        key: string &log;
+        value: string &log;
+    };
+
     ## Record type containing the column fields of the RESP log.
     type Info: record {
         ## Timestamp for when the activity happened.
@@ -87,11 +92,16 @@ function emit_log(c: connection)
     }
 
 # Example event defined in resp.evt.
-event RESP::data(c: connection, payload: RESPData)
+event RESP::data(c: connection, is_orig: bool, payload: RESPData)
     {
     hook set_session(c);
 
     local info = c$redis_resp;
     info$resp_data = payload;
     emit_log(c);
+    }
+
+event RESP::set_command(c: connection, is_orig: bool, command: SetCommand)
+    {
+    hook set_session(c);
     }
