@@ -106,7 +106,6 @@ type Set = tuple<
 >;
 
 public function make_set(arr: RESP::Array): Set {
-    # Assume it's been validated
     return (arr.elements[1].bulk_string.content, arr.elements[2].bulk_string.content);
 }
 
@@ -119,6 +118,12 @@ public function is_set(arr: RESP::Array): bool {
     return cmd && (*cmd == Command::SET);
 }
 
+type Get = tuple<bytes>;
+
+public function make_get(arr: RESP::Array): Get {
+    return (arr.elements[1].bulk_string.content, );
+}
+
 # Convenience method to avoid comparison with an optional in the evt
 public function is_get(arr: RESP::Array): bool {
     # SET key value
@@ -128,12 +133,27 @@ public function is_get(arr: RESP::Array): bool {
     return cmd && (*cmd == Command::GET);
 }
 
+type Publish = tuple<
+    bytes,
+    bytes,
+>;
+
+public function make_publish(arr: RESP::Array): Publish {
+    return (arr.elements[1].bulk_string.content, arr.elements[2].bulk_string.content);
+}
+
 public function is_publish(arr: RESP::Array): bool {
     # PUBLISH channel message
     if (arr.num_elements < 3)
         return False;
     local cmd = command_from(arr);
     return cmd && (*cmd == Command::PUBLISH);
+}
+
+type Subscribe = tuple<bytes>;
+
+public function make_subscribe(arr: RESP::Array): Subscribe {
+    return (arr.elements[1].bulk_string.content, );
 }
 
 public function is_subscribe(arr: RESP::Array): bool {

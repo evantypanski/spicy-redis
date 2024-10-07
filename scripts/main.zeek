@@ -30,6 +30,19 @@ export {
         value: string &log;
     };
 
+    type GetCommand: record {
+        key: string &log;
+    };
+
+    type PublishCommand: record {
+        channel: string &log;
+        message: string &log;
+    };
+
+    type SubscribeCommand: record {
+        channel: string &log;
+    };
+
     ## Record type containing the column fields of the RESP log.
     type Info: record {
         ## Timestamp for when the activity happened.
@@ -106,17 +119,17 @@ event RESP::set_command(c: connection, is_orig: bool, command: SetCommand)
     hook set_session(c);
     }
 
-event RESP::get_command(c: connection, is_orig: bool, key: string)
+event RESP::get_command(c: connection, is_orig: bool, command: GetCommand)
     {
     hook set_session(c);
     }
 
-event RESP::publish_command(c: connection, is_orig: bool, channel: string, message: string)
+event RESP::publish_command(c: connection, is_orig: bool, command: PublishCommand)
     {
     hook set_session(c);
     }
 
-event RESP::subscribe_command(c: connection, is_orig: bool, channel: string)
+event RESP::subscribe_command(c: connection, is_orig: bool, command: SubscribeCommand)
     {
     hook set_session(c);
     }

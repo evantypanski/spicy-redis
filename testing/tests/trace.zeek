@@ -9,7 +9,7 @@ event RESP::set_command(c: connection, is_orig: bool, command: RESP::SetCommand)
     print fmt("SET: %s", command);
     }
 
-event RESP::get_command(c: connection, is_orig: bool, key: string)
+event RESP::get_command(c: connection, is_orig: bool, command: RESP::GetCommand)
     {
-    print fmt("GET: %s", key);
+    print fmt("GET: %s", command);
     }
