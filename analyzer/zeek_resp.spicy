@@ -73,11 +73,12 @@ public function create_data(data: RESP::Data): ZeekData {
 
 type Command = enum {
     SET,
+    GET,
     PUBLISH,
     SUBSCRIBE,
 };
 
-public function get_command(arr: RESP::Array): optional<Command> {
+public function command_from(arr: RESP::Array): optional<Command> {
     if (arr.num_elements < 1)
         return Null;
 
@@ -90,6 +91,7 @@ public function get_command(arr: RESP::Array): optional<Command> {
     local cmd: optional<Command> = Null;
     switch (cmd_bytes.lower()) {
         case b"set": cmd = Command::SET;
+        case b"get": cmd = Command::GET;
         case b"publish": cmd = Command::PUBLISH;
         case b"subscribe": cmd = Command::SUBSCRIBE;
         default: cmd = Null;
@@ -113,15 +115,24 @@ public function is_set(arr: RESP::Array): bool {
     # SET key value
     if (arr.num_elements < 3)
         return False;
-    local cmd = get_command(arr);
+    local cmd = command_from(arr);
     return cmd && (*cmd == Command::SET);
+}
+
+# Convenience method to avoid comparison with an optional in the evt
+public function is_get(arr: RESP::Array): bool {
+    # SET key value
+    if (arr.num_elements != 2)
+        return False;
+    local cmd = command_from(arr);
+    return cmd && (*cmd == Command::GET);
 }
 
 public function is_publish(arr: RESP::Array): bool {
     # PUBLISH channel message
     if (arr.num_elements < 3)
         return False;
-    local cmd = get_command(arr);
+    local cmd = command_from(arr);
     return cmd && (*cmd == Command::PUBLISH);
 }
 
@@ -129,6 +140,6 @@ public function is_subscribe(arr: RESP::Array): bool {
     # PUBLISH channel message
     if (arr.num_elements < 2)
         return False;
-    local cmd = get_command(arr);
+    local cmd = command_from(arr);
     return cmd && (*cmd == Command::SUBSCRIBE);
 }
