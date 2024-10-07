@@ -105,3 +105,13 @@ event RESP::set_command(c: connection, is_orig: bool, command: SetCommand)
     {
     hook set_session(c);
     }
+
+event RESP::publish_command(c: connection, is_orig: bool, channel: string, message: string)
+    {
+    hook set_session(c);
+    }
+
+event RESP::subscribe_command(c: connection, is_orig: bool, channel: string)
+    {
+    hook set_session(c);
+    }

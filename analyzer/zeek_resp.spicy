@@ -73,6 +73,8 @@ public function create_data(data: RESP::Data): ZeekData {
 
 type Command = enum {
     SET,
+    PUBLISH,
+    SUBSCRIBE,
 };
 
 public function get_command(arr: RESP::Array): optional<Command> {
@@ -88,6 +90,8 @@ public function get_command(arr: RESP::Array): optional<Command> {
     local cmd: optional<Command> = Null;
     switch (cmd_bytes.lower()) {
         case b"set": cmd = Command::SET;
+        case b"publish": cmd = Command::PUBLISH;
+        case b"subscribe": cmd = Command::SUBSCRIBE;
         default: cmd = Null;
     }
 
@@ -106,6 +110,25 @@ public function make_set(arr: RESP::Array): Set {
 
 # Convenience method to avoid comparison with an optional in the evt
 public function is_set(arr: RESP::Array): bool {
+    # SET key value
+    if (arr.num_elements < 3)
+        return False;
     local cmd = get_command(arr);
     return cmd && (*cmd == Command::SET);
+}
+
+public function is_publish(arr: RESP::Array): bool {
+    # PUBLISH channel message
+    if (arr.num_elements < 3)
+        return False;
+    local cmd = get_command(arr);
+    return cmd && (*cmd == Command::PUBLISH);
+}
+
+public function is_subscribe(arr: RESP::Array): bool {
+    # PUBLISH channel message
+    if (arr.num_elements < 2)
+        return False;
+    local cmd = get_command(arr);
+    return cmd && (*cmd == Command::SUBSCRIBE);
 }
