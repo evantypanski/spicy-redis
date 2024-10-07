@@ -11,20 +11,6 @@ export {
         6379/tcp,
     } &redef;
 
-    type RESPData: record {
-        simple_string: string &optional &log;
-        simple_error: string &optional &log;
-        i: int &optional &log;
-        bulk_string: string &optional &log;
-        #array:
-        is_null: bool &log;
-        boolean: bool &optional &log;
-        double_: double &optional &log;
-        big_num: string &optional &log;
-        bulk_error: string &optional &log;
-        verbatim_string: string &optional &log;
-    };
-
     type SetCommand: record {
         key: string &log;
         value: string &log;
@@ -41,6 +27,13 @@ export {
 
     type SubscribeCommand: record {
         channel: string &log;
+    };
+
+    type RESPData: record {
+        set_command: SetCommand &optional &log;
+        get_command: GetCommand &optional &log;
+        publish_command: PublishCommand &optional &log;
+        subscribe_command: SubscribeCommand &optional &log;
     };
 
     ## Record type containing the column fields of the RESP log.
@@ -104,32 +97,38 @@ function emit_log(c: connection)
     delete c$redis_resp;
     }
 
-# Example event defined in resp.evt.
-event RESP::data(c: connection, is_orig: bool, payload: RESPData)
+event RESP::set_command(c: connection, is_orig: bool, command: SetCommand)
     {
     hook set_session(c);
 
     local info = c$redis_resp;
-    info$resp_data = payload;
+    info$resp_data$set_command = command;
     emit_log(c);
-    }
-
-event RESP::set_command(c: connection, is_orig: bool, command: SetCommand)
-    {
-    hook set_session(c);
     }
 
 event RESP::get_command(c: connection, is_orig: bool, command: GetCommand)
     {
     hook set_session(c);
+
+    local info = c$redis_resp;
+    info$resp_data$get_command = command;
+    emit_log(c);
     }
 
 event RESP::publish_command(c: connection, is_orig: bool, command: PublishCommand)
     {
     hook set_session(c);
+
+    local info = c$redis_resp;
+    info$resp_data$publish_command = command;
+    emit_log(c);
     }
 
 event RESP::subscribe_command(c: connection, is_orig: bool, command: SubscribeCommand)
     {
     hook set_session(c);
+
+    local info = c$redis_resp;
+    info$resp_data$subscribe_command = command;
+    emit_log(c);
     }
