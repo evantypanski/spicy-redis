@@ -15,62 +15,6 @@ on RESP::Data::%error {
     zeek::reject_protocol("error while parsing RESP data");
 }
 
-type ZeekData = tuple<
-    optional<bytes>, 
-    optional<bytes>, 
-    optional<int64>,
-    optional<bytes>, 
-    #optional<vector<ZeekData>>, # TODO: This segfaults because recursive type :(
-    bool,
-    optional<bool>,
-    optional<real>,
-    optional<string>, 
-    optional<bytes>, 
-    optional<bytes>, 
->;
-
-public function create_data(data: RESP::Data): ZeekData {
-    local simple_string: optional<bytes>;
-    local simple_error: optional<bytes>;
-    local i: optional<int64>;
-    local bulk_string: optional<bytes>;
-    #local array: optional<vector<ZeekData>>;
-    local null: bool;
-    local boolean: optional<bool>;
-    local double: optional<real>;
-    local big_num: optional<string>;
-    local bulk_error: optional<bytes>;
-    local verbatim_string: optional<bytes>;
-    if (data?.simple_string)
-        simple_string = data.simple_string.content;
-    if (data?.simple_error)
-        simple_error = data.simple_error.content;
-    if (data?.integer)
-        i = data.integer.int;
-    if (data?.bulk_string)
-        bulk_string = data.bulk_string.content;
-    #if (data?.array) {
-    #    for ( data in data.array.elements ) {
-    #        array.push_back(data);
-    #    }
-    #}
-    if (data?.null)
-        null = True;
-    else
-        null = False;
-    if (data?.boolean)
-        boolean = data.boolean.val;
-    if (data?.double)
-        double = data.double.val;
-    if (data?.big_num)
-        big_num = data.big_num.val;
-    if (data?.bulk_error)
-        bulk_error = data.bulk_error.content;
-    if (data?.verbatim_string)
-        verbatim_string = data.verbatim_string.content;
-    return (simple_string, simple_error, i, bulk_string, null, boolean, double, big_num, bulk_error, verbatim_string);
-}
-
 type Command = enum {
     SET,
     GET,
@@ -101,12 +45,89 @@ public function command_from(arr: RESP::Array): optional<Command> {
 }
 
 type Set = tuple<
+    # key
     bytes,
+    # value
     bytes,
+    # NX
+    bool,
+    # XX
+    bool,
+    # GET
+    bool,
+    # EX
+    optional<uint64>,
+    # PX
+    optional<uint64>,
+    # EXAT
+    optional<uint64>,
+    # PXAT
+    optional<uint64>,
+    # KEEPTTL
+    bool,
 >;
 
 public function make_set(arr: RESP::Array): Set {
-    return (arr.elements[1].bulk_string.content, arr.elements[2].bulk_string.content);
+    assert arr.num_elements >= 3 : "Must have at least 3 elements in SET";
+    local key = arr.elements[1].bulk_string.content;
+    local value = arr.elements[2].bulk_string.content;
+    local nx = False;
+    local xx = False;
+    local get = False;
+    local ex: optional<uint64> = Null;
+    local px: optional<uint64> = Null;
+    local exat: optional<uint64> = Null;
+    local pxat: optional<uint64> = Null;
+    local keep_ttl = False;
+    local i = 3;
+    local elements = cast<uint64>(arr.num_elements);
+    while ( i < elements ) {
+        # All array elements in a command will be a bulk string by default
+        if ( ! arr.elements[i]?.bulk_string ) {
+            ++i;
+            continue;
+        }
+
+        local content = arr.elements[i].bulk_string.content;
+        switch (content.lower()) {
+            case b"nx": nx = True;
+            case b"xx": xx = True;
+            case b"get": get = True;
+            case b"ex": {
+                ++i;
+                if ( i >= elements || ! arr.elements[i]?.bulk_string )
+                    break;
+                local inner = arr.elements[i].bulk_string.content;
+                ex = inner.to_uint();
+            }
+            case b"px": {
+                ++i;
+                if ( i >= elements || ! arr.elements[i]?.bulk_string )
+                    break;
+                local inner = arr.elements[i].bulk_string.content;
+                px = inner.to_uint();
+            }
+            case b"exat": {
+                ++i;
+                if ( i >= elements || ! arr.elements[i]?.bulk_string )
+                    break;
+                local inner = arr.elements[i].bulk_string.content;
+                exat = inner.to_uint();
+            }
+            case b"pxat": {
+                ++i;
+                if ( i >= elements || ! arr.elements[i]?.bulk_string )
+                    break;
+                local inner = arr.elements[i].bulk_string.content;
+                pxat = inner.to_uint();
+            }
+            case b"keepttl": keep_ttl = True;
+            default: ();
+        }
+
+        ++i;
+    }
+    return (key, value, nx, xx, get, ex, px, exat, pxat, keep_ttl);
 }
 
 # Convenience method to avoid comparison with an optional in the evt

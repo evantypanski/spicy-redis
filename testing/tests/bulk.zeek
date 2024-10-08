@@ -9,5 +9,5 @@
 # https://redis.io/docs/latest/develop/use/patterns/bulk-loading/
 event RESP::set_command(c: connection, is_orig: bool, command: RESP::SetCommand)
     {
-    print fmt("SET: %s", command);
+    print fmt("SET: %s %s", command$key, command$value);
     }

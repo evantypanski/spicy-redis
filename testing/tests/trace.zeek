@@ -6,7 +6,7 @@
 
 event RESP::set_command(c: connection, is_orig: bool, command: RESP::SetCommand)
     {
-    print fmt("SET: %s", command);
+    print fmt("SET: %s %s", command$key, command$value);
     }
 
 event RESP::get_command(c: connection, is_orig: bool, command: RESP::GetCommand)

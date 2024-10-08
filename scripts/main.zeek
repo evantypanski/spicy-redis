@@ -14,6 +14,14 @@ export {
     type SetCommand: record {
         key: string &log;
         value: string &log;
+        nx: bool;
+        xx: bool;
+        get: bool;
+        ex: count &optional;
+        px: count &optional;
+        exat: count &optional;
+        pxat: count &optional;
+        keep_ttl: bool;
     };
 
     type GetCommand: record {
