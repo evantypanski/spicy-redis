@@ -7,6 +7,8 @@
 #open XXXX-XX-XX-XX-XX-XX
 #fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	resp_data.set_command.key	resp_data.set_command.value	resp_data.get_command.key	resp_data.publish_command.channel	resp_data.publish_command.message	resp_data.subscribe_command.channel	resp_data.not_serialized
 #types	time	string	addr	port	addr	port	string	string	string	string	string	string	string
-XXXXXXXXXX.XXXXXX	CtPZjS20MLrsMUOJi2	127.0.0.1	53426	127.0.0.1	6379	-	-	-	-	-	my_channel	-
-XXXXXXXXXX.XXXXXX	CUM0KZ3MLUfNB0cl11	127.0.0.1	53450	127.0.0.1	6379	-	-	-	my_channel	1	-	-
+XXXXXXXXXX.XXXXXX	C4J4Th3PJpwUYZZ6gc	::1	56731	::1	6379	-	-	-	-	-	-	PING
+XXXXXXXXXX.XXXXXX	C4J4Th3PJpwUYZZ6gc	::1	56731	::1	6379	-	-	-	-	-	-	PING
+XXXXXXXXXX.XXXXXX	C4J4Th3PJpwUYZZ6gc	::1	56731	::1	6379	-	-	-	-	-	-	SET HI 3
+XXXXXXXXXX.XXXXXX	C4J4Th3PJpwUYZZ6gc	::1	56731	::1	6379	-	-	-	-	-	-	GET HI
 #close XXXX-XX-XX-XX-XX-XX

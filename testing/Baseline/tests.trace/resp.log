@@ -5,9 +5,9 @@
 #unset_field	-
 #path	resp
 #open XXXX-XX-XX-XX-XX-XX
-#fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	resp_data.set_command.key	resp_data.set_command.value	resp_data.get_command.key	resp_data.publish_command.channel	resp_data.publish_command.message	resp_data.subscribe_command.channel
-#types	time	string	addr	port	addr	port	string	string	string	string	string	string
-XXXXXXXXXX.XXXXXX	C4J4Th3PJpwUYZZ6gc	127.0.0.1	58972	127.0.0.1	6379	hi:2	2	-	-	-	-
-XXXXXXXXXX.XXXXXX	C4J4Th3PJpwUYZZ6gc	127.0.0.1	58972	127.0.0.1	6379	hi:3	sup	-	-	-	-
-XXXXXXXXXX.XXXXXX	C4J4Th3PJpwUYZZ6gc	127.0.0.1	58972	127.0.0.1	6379	-	-	hi:3	-	-	-
+#fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	resp_data.set_command.key	resp_data.set_command.value	resp_data.get_command.key	resp_data.publish_command.channel	resp_data.publish_command.message	resp_data.subscribe_command.channel	resp_data.not_serialized
+#types	time	string	addr	port	addr	port	string	string	string	string	string	string	string
+XXXXXXXXXX.XXXXXX	C4J4Th3PJpwUYZZ6gc	127.0.0.1	58972	127.0.0.1	6379	hi:2	2	-	-	-	-	-
+XXXXXXXXXX.XXXXXX	C4J4Th3PJpwUYZZ6gc	127.0.0.1	58972	127.0.0.1	6379	hi:3	sup	-	-	-	-	-
+XXXXXXXXXX.XXXXXX	C4J4Th3PJpwUYZZ6gc	127.0.0.1	58972	127.0.0.1	6379	-	-	hi:3	-	-	-	-
 #close XXXX-XX-XX-XX-XX-XX

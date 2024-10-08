@@ -34,6 +34,8 @@ export {
         get_command: GetCommand &optional &log;
         publish_command: PublishCommand &optional &log;
         subscribe_command: SubscribeCommand &optional &log;
+
+        not_serialized: string &optional &log;
     };
 
     ## Record type containing the column fields of the RESP log.
@@ -130,5 +132,14 @@ event RESP::subscribe_command(c: connection, is_orig: bool, command: SubscribeCo
 
     local info = c$redis_resp;
     info$resp_data$subscribe_command = command;
+    emit_log(c);
+    }
+
+event RESP::not_serialized(c: connection, is_orig: bool, data: string)
+    {
+    hook set_session(c);
+
+    local info = c$redis_resp;
+    info$resp_data$not_serialized = data;
     emit_log(c);
     }

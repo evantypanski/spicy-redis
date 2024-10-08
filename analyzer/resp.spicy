@@ -1,5 +1,7 @@
 module RESP;
 
+import spicy;
+
 public type Messages = unit {
     : (Data &synchronize)[];
 };
@@ -27,6 +29,9 @@ public type Data = unit {
         # "Push events are encoded similarly to arrays, differing only in their
         # first byte" - TODO: can probably make it more obvious, though
         DataType::PUSH -> push: Array;
+        # HACK: If the type isn't recognized, this is just some random unserialized
+        # string until \r\n - do this by prepending the type to the remaining bytes.
+        * -> not_serialized: bytes &convert=(pack(cast<uint8>(self.ty), spicy::ByteOrder::Network) + $$) &until=b"\x0d\x0a";
         };
 };
 
