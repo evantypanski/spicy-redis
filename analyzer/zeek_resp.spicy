@@ -147,7 +147,7 @@ public function make_get(arr: RESP::Array): Get {
 
 # Convenience method to avoid comparison with an optional in the evt
 public function is_get(arr: RESP::Array): bool {
-    # SET key value
+    # GET key
     if (arr.num_elements != 2)
         return False;
     local cmd = command_from(arr);
@@ -178,7 +178,7 @@ public function make_subscribe(arr: RESP::Array): Subscribe {
 }
 
 public function is_subscribe(arr: RESP::Array): bool {
-    # PUBLISH channel message
+    # SUBSCRIBE channel
     if (arr.num_elements < 2)
         return False;
     local cmd = command_from(arr);
