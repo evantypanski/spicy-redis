@@ -22,6 +22,37 @@ type Command = enum {
     SUBSCRIBE,
 };
 
+# Determines whether the structure of the array is a command. A command is just an array
+# of bulk strings, so that's what we're looking for.
+#
+# TODO: Really commands will only go from client->server, so maybe encode that somehow?
+public function is_command(arr: RESP::Array): bool {
+    if (arr.num_elements < 1)
+        return False;
+
+    return True;
+}
+
+# This just assumes all elements in the array is a bulk string and puts them in a vector
+public function make_command(arr: RESP::Array): vector<bytes> {
+    local v: vector<bytes>;
+    for ( ele in arr.elements ) {
+        # TODO: Stringify the other data too. Apparently commands *can* have other stuff
+        # such as SUBSCRIBE, which will magically put an integer after it.
+        if ( ele?.bulk_string )
+            v.push_back(ele.bulk_string.content);
+    }
+    return v;
+}
+
+public function unserialized_command(unserialized: RESP::Data): vector<bytes> {
+    # Only call this if it's unserialized :)
+    assert unserialized?.not_serialized;
+    local content = unserialized.not_serialized;
+    # TODO: escaping/strings? For example, string "Hi there" should be one element.
+    return content.split();
+}
+
 public function command_from(arr: RESP::Array): optional<Command> {
     if (arr.num_elements < 1)
         return Null;

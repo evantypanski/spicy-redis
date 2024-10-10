@@ -54,7 +54,12 @@ export {
         uid: string &log;
         ## The connection's 4-tuple of endpoint addresses/ports.
         id: conn_id &log;
-        resp_data: RESPData &log;
+        ## The string Redis command
+        cmd: string &log;
+        ## The key the command operates on, if any
+        key: string &log &optional;
+        ## The value the command uses, if any
+        value: string &log &optional;
     };
 
     ## A default logging policy hook for the stream.
@@ -95,7 +100,7 @@ hook set_session(c: connection)
     if ( c?$redis_resp )
         return;
 
-    c$redis_resp = Info($ts=network_time(), $uid=c$uid, $id=c$id);
+    c$redis_resp = Info($ts=network_time(), $uid=c$uid, $id=c$id, $cmd="");
     }
 
 function emit_log(c: connection)
@@ -112,8 +117,8 @@ event RESP::set_command(c: connection, is_orig: bool, command: SetCommand)
     hook set_session(c);
 
     local info = c$redis_resp;
-    info$resp_data$set_command = command;
-    emit_log(c);
+    info$key = command$key;
+    info$value = command$value;
     }
 
 event RESP::get_command(c: connection, is_orig: bool, command: GetCommand)
@@ -121,33 +126,24 @@ event RESP::get_command(c: connection, is_orig: bool, command: GetCommand)
     hook set_session(c);
 
     local info = c$redis_resp;
-    info$resp_data$get_command = command;
-    emit_log(c);
+    info$key = command$key;
     }
 
 event RESP::publish_command(c: connection, is_orig: bool, command: PublishCommand)
     {
     hook set_session(c);
-
-    local info = c$redis_resp;
-    info$resp_data$publish_command = command;
-    emit_log(c);
     }
 
 event RESP::subscribe_command(c: connection, is_orig: bool, command: SubscribeCommand)
     {
     hook set_session(c);
-
-    local info = c$redis_resp;
-    info$resp_data$subscribe_command = command;
-    emit_log(c);
     }
 
-event RESP::not_serialized(c: connection, is_orig: bool, data: string)
+event RESP::command(c: connection, is_orig: bool, command: vector of string)
     {
     hook set_session(c);
 
     local info = c$redis_resp;
-    info$resp_data$not_serialized = data;
+    info$cmd = command[0];
     emit_log(c);
     }
