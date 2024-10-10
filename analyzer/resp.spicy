@@ -31,7 +31,9 @@ public type Data = unit {
         DataType::PUSH -> push: Array;
         # HACK: If the type isn't recognized, this is just some random unserialized
         # string until \r\n - do this by prepending the type to the remaining bytes.
-        * -> not_serialized: bytes &convert=(pack(cast<uint8>(self.ty), spicy::ByteOrder::Network) + $$) &until=b"\x0d\x0a";
+        # We will, however, cap this data off at 1024 bytes. This may be encrypted, we
+        # don't want to accept random gibberish here.
+        * -> not_serialized: bytes &convert=(pack(cast<uint8>(self.ty), spicy::ByteOrder::Network) + $$) &until=b"\x0d\x0a" &max-size=1024;
         };
 };
 
