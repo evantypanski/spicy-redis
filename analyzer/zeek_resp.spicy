@@ -15,7 +15,7 @@ on RESP::Data::%error {
     zeek::reject_protocol("error while parsing RESP data");
 }
 
-type Command = enum {
+type KnownCommand = enum {
     SET,
     GET,
     PUBLISH,
@@ -33,8 +33,17 @@ public function is_command(arr: RESP::Array): bool {
     return True;
 }
 
+type Command = tuple<
+    # raw command
+    vector<bytes>,
+    # key
+    optional<bytes>,
+    # value
+    optional<bytes>,
+>;
+
 # This just assumes all elements in the array is a bulk string and puts them in a vector
-public function make_command(arr: RESP::Array): vector<bytes> {
+public function make_command(arr: RESP::Array): Command {
     local v: vector<bytes>;
     for ( ele in arr.elements ) {
         # TODO: Stringify the other data too. Apparently commands *can* have other stuff
@@ -42,33 +51,50 @@ public function make_command(arr: RESP::Array): vector<bytes> {
         if ( ele?.bulk_string )
             v.push_back(ele.bulk_string.content);
     }
-    return v;
+    return parse_command(v);
 }
 
-public function unserialized_command(unserialized: RESP::Data): vector<bytes> {
+public function unserialized_command(unserialized: RESP::Data): Command {
     # Only call this if it's unserialized :)
     assert unserialized?.not_serialized;
     local content = unserialized.not_serialized;
     # TODO: escaping/strings? For example, string "Hi there" should be one element.
-    return content.split();
+    return parse_command(content.split());
 }
 
-public function command_from(arr: RESP::Array): optional<Command> {
-    if (arr.num_elements < 1)
-        return Null;
+# Parses the vector of bytes to get a Command object
+function parse_command(raw: vector<bytes>): Command {
+    assert |raw| >= 1;
+    local parsed: Command = (raw, Null, Null);
+    local cmd = command_from(raw[0]);
+    if ( ! cmd )
+        return parsed;
 
-    local first = arr.elements[0];
-    if (!first?.bulk_string)
-        return Null;
+    if ( |raw| >= 2 ) {
+        switch ( *cmd ) {
+            case KnownCommand::SET: parsed[1] = raw[1];
+            case KnownCommand::GET: parsed[1] = raw[1];
+            default: ();
+        }
+    }
 
-    local cmd_bytes = first.bulk_string.content;
+    if ( |raw| >= 3 ) {
+        switch ( *cmd ) {
+            case KnownCommand::SET: parsed[2] = raw[2];
+            default: ();
+        }
+    }
 
-    local cmd: optional<Command> = Null;
+    return parsed;
+}
+
+function command_from(cmd_bytes: bytes): optional<KnownCommand> {
+    local cmd: optional<KnownCommand> = Null;
     switch (cmd_bytes.lower()) {
-        case b"set": cmd = Command::SET;
-        case b"get": cmd = Command::GET;
-        case b"publish": cmd = Command::PUBLISH;
-        case b"subscribe": cmd = Command::SUBSCRIBE;
+        case b"set": cmd = KnownCommand::SET;
+        case b"get": cmd = KnownCommand::GET;
+        case b"publish": cmd = KnownCommand::PUBLISH;
+        case b"subscribe": cmd = KnownCommand::SUBSCRIBE;
         default: cmd = Null;
     }
 
@@ -166,8 +192,15 @@ public function is_set(arr: RESP::Array): bool {
     # SET key value
     if (arr.num_elements < 3)
         return False;
-    local cmd = command_from(arr);
-    return cmd && (*cmd == Command::SET);
+
+    local first = arr.elements[0];
+    if (!first?.bulk_string)
+        return False;
+
+    local cmd_bytes = first.bulk_string.content;
+
+    local cmd = command_from(cmd_bytes);
+    return cmd && (*cmd == KnownCommand::SET);
 }
 
 type Get = tuple<bytes>;
@@ -181,37 +214,13 @@ public function is_get(arr: RESP::Array): bool {
     # GET key
     if (arr.num_elements != 2)
         return False;
-    local cmd = command_from(arr);
-    return cmd && (*cmd == Command::GET);
-}
 
-type Publish = tuple<
-    bytes,
-    bytes,
->;
-
-public function make_publish(arr: RESP::Array): Publish {
-    return (arr.elements[1].bulk_string.content, arr.elements[2].bulk_string.content);
-}
-
-public function is_publish(arr: RESP::Array): bool {
-    # PUBLISH channel message
-    if (arr.num_elements < 3)
+    local first = arr.elements[0];
+    if (!first?.bulk_string)
         return False;
-    local cmd = command_from(arr);
-    return cmd && (*cmd == Command::PUBLISH);
-}
 
-type Subscribe = tuple<bytes>;
+    local cmd_bytes = first.bulk_string.content;
 
-public function make_subscribe(arr: RESP::Array): Subscribe {
-    return (arr.elements[1].bulk_string.content, );
-}
-
-public function is_subscribe(arr: RESP::Array): bool {
-    # SUBSCRIBE channel
-    if (arr.num_elements < 2)
-        return False;
-    local cmd = command_from(arr);
-    return cmd && (*cmd == Command::SUBSCRIBE);
+    local cmd = command_from(cmd_bytes);
+    return cmd && (*cmd == KnownCommand::GET);
 }

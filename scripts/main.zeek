@@ -28,20 +28,13 @@ export {
         key: string &log;
     };
 
-    type PublishCommand: record {
-        channel: string &log;
-        message: string &log;
-    };
-
-    type SubscribeCommand: record {
-        channel: string &log;
-    };
-
-    type RESPData: record {
-        set_command: SetCommand &optional &log;
-        get_command: GetCommand &optional &log;
-
-        not_serialized: string &optional &log;
+    type Command: record {
+        ## The raw command, exactly as parsed
+        raw: vector of string &log;
+        ## The key, if this command is known to have a key
+        key: string &log &optional;
+        ## The value, if this command is known to have a value
+        value: string &log &optional;
     };
 
     ## Record type containing the column fields of the RESP log.
@@ -52,12 +45,8 @@ export {
         uid: string &log;
         ## The connection's 4-tuple of endpoint addresses/ports.
         id: conn_id &log;
-        ## The string Redis command
-        cmd: string &log;
-        ## The key the command operates on, if any
-        key: string &log &optional;
-        ## The value the command uses, if any
-        value: string &log &optional;
+        ## The Redis command
+        cmd: Command &log;
     };
 
     ## A default logging policy hook for the stream.
@@ -93,12 +82,12 @@ event zeek_init() &priority=5
     }
 
 # Initialize logging state.
-hook set_session(c: connection)
+hook set_session(c: connection, cmd: Command)
     {
     if ( c?$redis_resp )
         return;
 
-    c$redis_resp = Info($ts=network_time(), $uid=c$uid, $id=c$id, $cmd="");
+    c$redis_resp = Info($ts=network_time(), $uid=c$uid, $id=c$id, $cmd=cmd);
     }
 
 function emit_log(c: connection)
@@ -110,28 +99,10 @@ function emit_log(c: connection)
     delete c$redis_resp;
     }
 
-event RESP::set_command(c: connection, is_orig: bool, command: SetCommand)
+event RESP::command(c: connection, is_orig: bool, command: Command)
     {
-    hook set_session(c);
+    hook set_session(c, command);
 
     local info = c$redis_resp;
-    info$key = command$key;
-    info$value = command$value;
-    }
-
-event RESP::get_command(c: connection, is_orig: bool, command: GetCommand)
-    {
-    hook set_session(c);
-
-    local info = c$redis_resp;
-    info$key = command$key;
-    }
-
-event RESP::command(c: connection, is_orig: bool, command: vector of string)
-    {
-    hook set_session(c);
-
-    local info = c$redis_resp;
-    info$cmd = command[0];
     emit_log(c);
     }
