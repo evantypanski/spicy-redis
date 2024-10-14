@@ -16,10 +16,45 @@ on RESP::Data::%error {
 }
 
 type KnownCommand = enum {
-    SET,
+    APPEND,
+    BITCOUNT,
+    BITFIELD,
+    BITFIELD_RO,
+    BITOP,
+    BITPOS,
+    BLMPOP,
+    BLPOP,
+    BRPOP,
+    COPY,
+    DECR,
+    DECRBY,
+    DEL,
+    DUMP,
+    EXISTS,
+    EXPIRE,
+    EXPIREAT,
+    EXPIRETIME,
     GET,
-    PUBLISH,
-    SUBSCRIBE,
+    GETBIT,
+    GETDEL,
+    GETEX,
+    GETRANGE,
+    GETSET,
+    HDEL,
+    HGET,
+    HSET,
+    INCR,
+    INCRBY,
+    KEYS,
+    MGET,
+    MOVE,
+    MSET,
+    PERSIST,
+    RENAME,
+    SET,
+    STRLEN,
+    TTL,
+    TYPE,
 };
 
 # Determines whether the structure of the array is a command. A command is just an array
@@ -72,15 +107,43 @@ function parse_command(raw: vector<bytes>): Command {
 
     if ( |raw| >= 2 ) {
         switch ( *cmd ) {
-            case KnownCommand::SET: parsed[1] = raw[1];
-            case KnownCommand::GET: parsed[1] = raw[1];
+            case KnownCommand::KEYS:
+                    parsed[2] = raw[1];
+            case KnownCommand::APPEND, KnownCommand::BITCOUNT, KnownCommand::BITFIELD,
+                 KnownCommand::BITFIELD_RO, KnownCommand::BITPOS, KnownCommand::BLPOP,
+                 KnownCommand::BRPOP, KnownCommand::COPY, KnownCommand::DECR,
+                 KnownCommand::DECRBY, KnownCommand::DEL, KnownCommand::DUMP,
+                 KnownCommand::EXISTS, KnownCommand::EXPIRE, KnownCommand::EXPIREAT,
+                 KnownCommand::EXPIRETIME, KnownCommand::GET, KnownCommand::GETBIT,
+                 KnownCommand::GETDEL, KnownCommand::GETEX, KnownCommand::GETRANGE,
+                 KnownCommand::GETSET, KnownCommand::HDEL, KnownCommand::HGET,
+                 KnownCommand::HSET, KnownCommand::INCR, KnownCommand::INCRBY,
+                 KnownCommand::MGET, KnownCommand::MOVE, KnownCommand::MSET,
+                 KnownCommand::PERSIST, KnownCommand::RENAME, KnownCommand::SET,
+                 KnownCommand::STRLEN, KnownCommand::TTL, KnownCommand::TYPE:
+                    parsed[1] = raw[1];
             default: ();
         }
     }
 
     if ( |raw| >= 3 ) {
         switch ( *cmd ) {
-            case KnownCommand::SET: parsed[2] = raw[2];
+            case KnownCommand::SET, KnownCommand::APPEND, KnownCommand::DECRBY,
+                 KnownCommand::EXPIRE, KnownCommand::EXPIREAT, KnownCommand::GETBIT,
+                 KnownCommand::GETSET, KnownCommand::HDEL, KnownCommand::HGET,
+                 KnownCommand::INCRBY, KnownCommand::MOVE, KnownCommand::MSET,
+                 KnownCommand::RENAME:
+                    parsed[2] = raw[2];
+            # Op first, destination second, then a list of keys. Just log dest
+            case KnownCommand::BITOP: parsed[1] = raw[2];
+            default: ();
+        }
+    }
+
+    if ( |raw| >= 4 ) {
+        switch ( *cmd ) {
+            # timeout, numkeys, then key
+            case KnownCommand::BLMPOP: parsed[1] = raw[3];
             default: ();
         }
     }
@@ -92,9 +155,45 @@ function command_from(cmd_bytes: bytes): optional<KnownCommand> {
     local cmd: optional<KnownCommand> = Null;
     switch (cmd_bytes.lower()) {
         case b"set": cmd = KnownCommand::SET;
+        case b"append": cmd = KnownCommand::APPEND;
+        case b"bitcount": cmd = KnownCommand::BITCOUNT;
+        case b"bitfield": cmd = KnownCommand::BITFIELD;
+        case b"bitfield_ro": cmd = KnownCommand::BITFIELD_RO;
+        case b"bitop": cmd = KnownCommand::BITOP;
+        case b"bitpos": cmd = KnownCommand::BITPOS;
+        case b"blmpop": cmd = KnownCommand::BLMPOP;
+        case b"blpop": cmd = KnownCommand::BLPOP;
+        case b"brpop": cmd = KnownCommand::BRPOP;
+        case b"copy": cmd = KnownCommand::COPY;
+        case b"decr": cmd = KnownCommand::DECR;
+        case b"decrby": cmd = KnownCommand::DECRBY;
+        case b"del": cmd = KnownCommand::DEL;
+        case b"dump": cmd = KnownCommand::DUMP;
+        case b"exists": cmd = KnownCommand::EXISTS;
+        case b"expire": cmd = KnownCommand::EXPIRE;
+        case b"expireat": cmd = KnownCommand::EXPIREAT;
+        case b"expiretime": cmd = KnownCommand::EXPIRETIME;
+        case b"expiretime": cmd = KnownCommand::EXPIRETIME;
         case b"get": cmd = KnownCommand::GET;
-        case b"publish": cmd = KnownCommand::PUBLISH;
-        case b"subscribe": cmd = KnownCommand::SUBSCRIBE;
+        case b"getbit": cmd = KnownCommand::GETBIT;
+        case b"getdel": cmd = KnownCommand::GETDEL;
+        case b"getex": cmd = KnownCommand::GETEX;
+        case b"getrange": cmd = KnownCommand::GETRANGE;
+        case b"getset": cmd = KnownCommand::GETSET;
+        case b"hdel": cmd = KnownCommand::HDEL;
+        case b"hget": cmd = KnownCommand::HGET;
+        case b"hset": cmd = KnownCommand::HSET;
+        case b"incr": cmd = KnownCommand::INCR;
+        case b"incrby": cmd = KnownCommand::INCRBY;
+        case b"keys": cmd = KnownCommand::KEYS;
+        case b"mget": cmd = KnownCommand::MGET;
+        case b"move": cmd = KnownCommand::MOVE;
+        case b"mset": cmd = KnownCommand::MSET;
+        case b"persist": cmd = KnownCommand::PERSIST;
+        case b"rename": cmd = KnownCommand::RENAME;
+        case b"strlen": cmd = KnownCommand::STRLEN;
+        case b"ttl": cmd = KnownCommand::TTL;
+        case b"type": cmd = KnownCommand::TYPE;
         default: cmd = Null;
     }
 
