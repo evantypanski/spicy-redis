@@ -40,8 +40,6 @@ export {
     type RESPData: record {
         set_command: SetCommand &optional &log;
         get_command: GetCommand &optional &log;
-        publish_command: PublishCommand &optional &log;
-        subscribe_command: SubscribeCommand &optional &log;
 
         not_serialized: string &optional &log;
     };
@@ -127,16 +125,6 @@ event RESP::get_command(c: connection, is_orig: bool, command: GetCommand)
 
     local info = c$redis_resp;
     info$key = command$key;
-    }
-
-event RESP::publish_command(c: connection, is_orig: bool, command: PublishCommand)
-    {
-    hook set_session(c);
-    }
-
-event RESP::subscribe_command(c: connection, is_orig: bool, command: SubscribeCommand)
-    {
-    hook set_session(c);
     }
 
 event RESP::command(c: connection, is_orig: bool, command: vector of string)

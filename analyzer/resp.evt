@@ -7,8 +7,6 @@ import Zeek_RESP;
 
 on RESP::Array if ( Zeek_RESP::is_set(self) ) -> event RESP::set_command($conn, $is_orig, Zeek_RESP::make_set(self));
 on RESP::Array if ( Zeek_RESP::is_get(self) ) -> event RESP::get_command($conn, $is_orig, Zeek_RESP::make_get(self));
-on RESP::Array if ( Zeek_RESP::is_publish(self) ) -> event RESP::publish_command($conn, $is_orig, Zeek_RESP::make_publish(self));
-on RESP::Array if ( Zeek_RESP::is_subscribe(self) ) -> event RESP::subscribe_command($conn, $is_orig, Zeek_RESP::make_subscribe(self));
 
 # Generic catch-all for commands. A command is an array of bulk strings, so we hope that
 # this will catch those, but the server can provide that as well.
