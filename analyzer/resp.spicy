@@ -68,7 +68,7 @@ type BulkString = unit(is_error: bool) {
     content: bytes &size=uint64( self.length ) if ( self.length >= 0 );
 
     # Consume last CLRF
-    : bytes &until=b"\x0d\x0a";
+    : skip bytes &until=b"\x0d\x0a";
 };
 
 type Array = unit {
@@ -79,12 +79,12 @@ type Array = unit {
 
 type Null_ = unit {
     # Still must consume CLRF
-    : bytes &until=b"\x0d\x0a";
+    : skip bytes &until=b"\x0d\x0a";
 };
 
 type Boolean = unit {
     val: uint8 &convert=$$ == 't';
-    : bytes &until=b"\x0d\x0a";
+    : skip bytes &until=b"\x0d\x0a";
 };
 
 type Double = unit {
