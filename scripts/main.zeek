@@ -30,7 +30,10 @@ export {
 
     type Command: record {
         ## The raw command, exactly as parsed
-        raw: vector of string &log;
+        raw: vector of string;
+        ## The first element of the command. Some commands are two strings, meaning this
+        ## is inaccurate for those cases.
+        command: string &log;
         ## The key, if this command is known to have a key
         key: string &log &optional;
         ## The value, if this command is known to have a value

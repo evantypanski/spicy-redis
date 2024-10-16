@@ -71,6 +71,8 @@ public function is_command(arr: RESP::Array): bool {
 type Command = tuple<
     # raw command
     vector<bytes>,
+    # command
+    bytes,
     # key
     optional<bytes>,
     # value
@@ -100,7 +102,7 @@ public function unserialized_command(unserialized: RESP::Data): Command {
 # Parses the vector of bytes to get a Command object
 function parse_command(raw: vector<bytes>): Command {
     assert |raw| >= 1;
-    local parsed: Command = (raw, Null, Null);
+    local parsed: Command = (raw, raw[0], Null, Null);
     local cmd = command_from(raw[0]);
     if ( ! cmd )
         return parsed;
@@ -108,7 +110,7 @@ function parse_command(raw: vector<bytes>): Command {
     if ( |raw| >= 2 ) {
         switch ( *cmd ) {
             case KnownCommand::KEYS:
-                    parsed[2] = raw[1];
+                    parsed[3] = raw[1];
             case KnownCommand::APPEND, KnownCommand::BITCOUNT, KnownCommand::BITFIELD,
                  KnownCommand::BITFIELD_RO, KnownCommand::BITPOS, KnownCommand::BLPOP,
                  KnownCommand::BRPOP, KnownCommand::COPY, KnownCommand::DECR,
@@ -121,7 +123,7 @@ function parse_command(raw: vector<bytes>): Command {
                  KnownCommand::MGET, KnownCommand::MOVE, KnownCommand::MSET,
                  KnownCommand::PERSIST, KnownCommand::RENAME, KnownCommand::SET,
                  KnownCommand::STRLEN, KnownCommand::TTL, KnownCommand::TYPE:
-                    parsed[1] = raw[1];
+                    parsed[2] = raw[1];
             default: ();
         }
     }
@@ -133,9 +135,9 @@ function parse_command(raw: vector<bytes>): Command {
                  KnownCommand::GETSET, KnownCommand::HDEL, KnownCommand::HGET,
                  KnownCommand::INCRBY, KnownCommand::MOVE, KnownCommand::MSET,
                  KnownCommand::RENAME:
-                    parsed[2] = raw[2];
+                    parsed[3] = raw[2];
             # Op first, destination second, then a list of keys. Just log dest
-            case KnownCommand::BITOP: parsed[1] = raw[2];
+            case KnownCommand::BITOP: parsed[2] = raw[2];
             default: ();
         }
     }
@@ -143,7 +145,7 @@ function parse_command(raw: vector<bytes>): Command {
     if ( |raw| >= 4 ) {
         switch ( *cmd ) {
             # timeout, numkeys, then key
-            case KnownCommand::BLMPOP: parsed[1] = raw[3];
+            case KnownCommand::BLMPOP: parsed[2] = raw[3];
             default: ();
         }
     }
