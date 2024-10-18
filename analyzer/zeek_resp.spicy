@@ -69,23 +69,22 @@ public function is_command(arr: RESP::Array): bool {
 }
 
 type Command = tuple<
-    # raw command
-    vector<bytes>,
-    # command
-    bytes,
-    # key
-    optional<bytes>,
-    # value
-    optional<bytes>,
->;
+# raw command
+vector<bytes>,
+# command
+bytes,
+# key
+optional<bytes>,
+# value
+optional<bytes>, >;
 
 # This just assumes all elements in the array is a bulk string and puts them in a vector
 public function make_command(arr: RESP::Array): Command {
     local v: vector<bytes>;
-    for ( ele in arr.elements ) {
+    for (ele in arr.elements) {
         # TODO: Stringify the other data too. Apparently commands *can* have other stuff
         # such as SUBSCRIBE, which will magically put an integer after it.
-        if ( ele?.bulk_string )
+        if (ele?.bulk_string)
             v.push_back(ele.bulk_string.content);
     }
     return parse_command(v);
@@ -104,46 +103,78 @@ function parse_command(raw: vector<bytes>): Command {
     assert |raw| >= 1;
     local parsed: Command = (raw, raw[0], Null, Null);
     local cmd = command_from(raw[0]);
-    if ( ! cmd )
+    if (!cmd)
         return parsed;
 
-    if ( |raw| >= 2 ) {
-        switch ( *cmd ) {
+    if (|raw| >= 2) {
+        switch (*cmd) {
             case KnownCommand::KEYS:
-                    parsed[3] = raw[1];
-            case KnownCommand::APPEND, KnownCommand::BITCOUNT, KnownCommand::BITFIELD,
-                 KnownCommand::BITFIELD_RO, KnownCommand::BITPOS, KnownCommand::BLPOP,
-                 KnownCommand::BRPOP, KnownCommand::COPY, KnownCommand::DECR,
-                 KnownCommand::DECRBY, KnownCommand::DEL, KnownCommand::DUMP,
-                 KnownCommand::EXISTS, KnownCommand::EXPIRE, KnownCommand::EXPIREAT,
-                 KnownCommand::EXPIRETIME, KnownCommand::GET, KnownCommand::GETBIT,
-                 KnownCommand::GETDEL, KnownCommand::GETEX, KnownCommand::GETRANGE,
-                 KnownCommand::GETSET, KnownCommand::HDEL, KnownCommand::HGET,
-                 KnownCommand::HSET, KnownCommand::INCR, KnownCommand::INCRBY,
-                 KnownCommand::MGET, KnownCommand::MOVE, KnownCommand::MSET,
-                 KnownCommand::PERSIST, KnownCommand::RENAME, KnownCommand::SET,
-                 KnownCommand::STRLEN, KnownCommand::TTL, KnownCommand::TYPE:
-                    parsed[2] = raw[1];
+                parsed[3] = raw[1];
+            case KnownCommand::APPEND,
+                 KnownCommand::BITCOUNT,
+                 KnownCommand::BITFIELD,
+                 KnownCommand::BITFIELD_RO,
+                 KnownCommand::BITPOS,
+                 KnownCommand::BLPOP,
+                 KnownCommand::BRPOP,
+                 KnownCommand::COPY,
+                 KnownCommand::DECR,
+                 KnownCommand::DECRBY,
+                 KnownCommand::DEL,
+                 KnownCommand::DUMP,
+                 KnownCommand::EXISTS,
+                 KnownCommand::EXPIRE,
+                 KnownCommand::EXPIREAT,
+                 KnownCommand::EXPIRETIME,
+                 KnownCommand::GET,
+                 KnownCommand::GETBIT,
+                 KnownCommand::GETDEL,
+                 KnownCommand::GETEX,
+                 KnownCommand::GETRANGE,
+                 KnownCommand::GETSET,
+                 KnownCommand::HDEL,
+                 KnownCommand::HGET,
+                 KnownCommand::HSET,
+                 KnownCommand::INCR,
+                 KnownCommand::INCRBY,
+                 KnownCommand::MGET,
+                 KnownCommand::MOVE,
+                 KnownCommand::MSET,
+                 KnownCommand::PERSIST,
+                 KnownCommand::RENAME,
+                 KnownCommand::SET,
+                 KnownCommand::STRLEN,
+                 KnownCommand::TTL,
+                 KnownCommand::TYPE:
+                parsed[2] = raw[1];
             default: ();
         }
     }
 
-    if ( |raw| >= 3 ) {
-        switch ( *cmd ) {
-            case KnownCommand::SET, KnownCommand::APPEND, KnownCommand::DECRBY,
-                 KnownCommand::EXPIRE, KnownCommand::EXPIREAT, KnownCommand::GETBIT,
-                 KnownCommand::GETSET, KnownCommand::HDEL, KnownCommand::HGET,
-                 KnownCommand::INCRBY, KnownCommand::MOVE, KnownCommand::MSET,
+    if (|raw| >= 3) {
+        switch (*cmd) {
+            case KnownCommand::SET,
+                 KnownCommand::APPEND,
+                 KnownCommand::DECRBY,
+                 KnownCommand::EXPIRE,
+                 KnownCommand::EXPIREAT,
+                 KnownCommand::GETBIT,
+                 KnownCommand::GETSET,
+                 KnownCommand::HDEL,
+                 KnownCommand::HGET,
+                 KnownCommand::INCRBY,
+                 KnownCommand::MOVE,
+                 KnownCommand::MSET,
                  KnownCommand::RENAME:
-                    parsed[3] = raw[2];
+                parsed[3] = raw[2];
             # Op first, destination second, then a list of keys. Just log dest
             case KnownCommand::BITOP: parsed[2] = raw[2];
             default: ();
         }
     }
 
-    if ( |raw| >= 4 ) {
-        switch ( *cmd ) {
+    if (|raw| >= 4) {
+        switch (*cmd) {
             # timeout, numkeys, then key
             case KnownCommand::BLMPOP: parsed[2] = raw[3];
             default: ();
@@ -203,27 +234,26 @@ function command_from(cmd_bytes: bytes): optional<KnownCommand> {
 }
 
 type Set = tuple<
-    # key
-    bytes,
-    # value
-    bytes,
-    # NX
-    bool,
-    # XX
-    bool,
-    # GET
-    bool,
-    # EX
-    optional<uint64>,
-    # PX
-    optional<uint64>,
-    # EXAT
-    optional<uint64>,
-    # PXAT
-    optional<uint64>,
-    # KEEPTTL
-    bool,
->;
+# key
+bytes,
+# value
+bytes,
+# NX
+bool,
+# XX
+bool,
+# GET
+bool,
+# EX
+optional<uint64>,
+# PX
+optional<uint64>,
+# EXAT
+optional<uint64>,
+# PXAT
+optional<uint64>,
+# KEEPTTL
+bool, >;
 
 public function make_set(arr: RESP::Array): Set {
     assert arr.num_elements >= 3 : "Must have at least 3 elements in SET";
@@ -239,9 +269,9 @@ public function make_set(arr: RESP::Array): Set {
     local keep_ttl = False;
     local i = 3;
     local elements = cast<uint64>(arr.num_elements);
-    while ( i < elements ) {
+    while (i < elements) {
         # All array elements in a command will be a bulk string by default
-        if ( ! arr.elements[i]?.bulk_string ) {
+        if (!arr.elements[i]?.bulk_string) {
             ++i;
             continue;
         }
@@ -253,28 +283,28 @@ public function make_set(arr: RESP::Array): Set {
             case b"get": get = True;
             case b"ex": {
                 ++i;
-                if ( i >= elements || ! arr.elements[i]?.bulk_string )
+                if (i >= elements || !arr.elements[i]?.bulk_string)
                     break;
                 local inner = arr.elements[i].bulk_string.content;
                 ex = inner.to_uint();
             }
             case b"px": {
                 ++i;
-                if ( i >= elements || ! arr.elements[i]?.bulk_string )
+                if (i >= elements || !arr.elements[i]?.bulk_string)
                     break;
                 local inner = arr.elements[i].bulk_string.content;
                 px = inner.to_uint();
             }
             case b"exat": {
                 ++i;
-                if ( i >= elements || ! arr.elements[i]?.bulk_string )
+                if (i >= elements || !arr.elements[i]?.bulk_string)
                     break;
                 local inner = arr.elements[i].bulk_string.content;
                 exat = inner.to_uint();
             }
             case b"pxat": {
                 ++i;
-                if ( i >= elements || ! arr.elements[i]?.bulk_string )
+                if (i >= elements || !arr.elements[i]?.bulk_string)
                     break;
                 local inner = arr.elements[i].bulk_string.content;
                 pxat = inner.to_uint();

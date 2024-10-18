@@ -7,9 +7,9 @@ public type Messages = unit {
 };
 
 public type Data = unit {
-    %synchronize-after=b"\x0d\x0a";
+    %synchronize-after = b"\x0d\x0a";
     ty: uint8 &convert=DataType($$);
-    switch ( self.ty ) {
+    switch (self.ty) {
         DataType::SIMPLE_STRING -> simple_string: SimpleString(False);
         DataType::SIMPLE_ERROR -> simple_error: SimpleString(True);
         DataType::INTEGER -> integer: Integer;
@@ -31,10 +31,12 @@ public type Data = unit {
         DataType::PUSH -> push: Array;
         # HACK: If the type isn't recognized, this is just some random unserialized
         # string until \r\n - do this by prepending the type to the remaining bytes.
-        # We will, however, cap this data off at 1024 bytes. This may be encrypted, we
-        # don't want to accept random gibberish here.
+        # Formally in Redis code, that's an "inline protocol."
+        #
+        # As an extra point, this is handled in redis in `processInlineBuffer`,
+        # which has a hardcoded limit of 1024*64. That seems too big. We'll do 1024.
         * -> not_serialized: bytes &convert=(pack(cast<uint8>(self.ty), spicy::ByteOrder::Network) + $$) &until=b"\x0d\x0a" &max-size=1024;
-        };
+    };
 };
 
 type DataType = enum {
@@ -51,7 +53,7 @@ type DataType = enum {
     VERBATIM_STRING = '=',
     MAP = '%',
     SET = '~',
-    PUSH = '>'
+    PUSH = '>',
 };
 
 type SimpleString = unit(is_error: bool) {
@@ -65,7 +67,7 @@ type Integer = unit {
 type BulkString = unit(is_error: bool) {
     length: bytes &convert=$$.to_int(10) &until=b"\x0d\x0a";
     # NullBulkString is a BulkString with content unset
-    content: bytes &size=uint64( self.length ) if ( self.length >= 0 );
+    content: bytes &size=uint64(self.length) if(self.length >= 0);
 
     # Consume last CLRF
     : skip bytes &until=b"\x0d\x0a";
@@ -74,7 +76,7 @@ type BulkString = unit(is_error: bool) {
 type Array = unit {
     num_elements: bytes &convert=$$.to_int(10) &until=b"\x0d\x0a";
     # Null array is an array with elements unset. This is different from an empty array
-    elements: Data[uint64(self.num_elements)] if ( self.num_elements >= 0 );
+    elements: Data[uint64(self.num_elements)] if(self.num_elements >= 0);
 };
 
 type Null_ = unit {
@@ -100,9 +102,9 @@ type Map = unit {
     var key_val_pairs: vector<tuple<Data, Data>>;
     num_elements: bytes &convert=$$.to_uint(10) &until=b"\x0d\x0a";
     # TODO: How can I make this into a map? Alternatively, how can I do this better?
-    raw_data: Data[self.num_elements*2] {
-        while ( local i = 0; i < self.num_elements ) {
-            self.key_val_pairs.push_back(($$[i], $$[i+1]));
+    raw_data: Data[self.num_elements * 2] {
+        while (local i = 0; i < self.num_elements) {
+            self.key_val_pairs.push_back(($$[i], $$[i + 1]));
             i += 2;
         }
     }
