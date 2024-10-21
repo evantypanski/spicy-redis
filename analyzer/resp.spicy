@@ -103,8 +103,8 @@ type Double = unit {
 };
 
 type BigNum = unit {
-    # Big num can be very big so put it in a UTF-8 decoded string
-    val: RedisBytes &convert=$$.decode() ;
+    # Big num can be very big so leave it in bytes.
+    val: RedisBytes;
 };
 
 type Map = unit {
