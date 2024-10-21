@@ -80,12 +80,71 @@ public function make_command(arr: RESP::Array): Command {
     return parse_command(v);
 }
 
+const WhiteSpace = /[ \t\n]+/;
+
 public function unserialized_command(unserialized: RESP::Data): Command {
     # Only call this if it's unserialized :)
     assert unserialized?.not_serialized;
     local content = unserialized.not_serialized;
-    # TODO: escaping/strings? For example, string "Hi there" should be one element.
-    return parse_command(content.split());
+
+    local tokenized: vector<bytes>;
+    local current: bytes = b"";
+    local double_quotes = False;
+    local single_quotes = False;
+    local it = content.at(0);
+    # Note: this logic is a bit different from Redis. Hopefully it doesn't matter
+    while (True) {
+        while (it != end(content) && (*it == ' ' || *it == 10 || *it == 13)) {
+            it++;
+        }
+
+        # Get a token
+        local start = it;
+        if (it != end(content)) {
+            local double_quotes = False;
+            local single_quotes = False;
+            local done = False;
+            while (!done) {
+                if (double_quotes) {
+                    if (it == end(content)) {
+                        # TODO: Error unclosed quotes
+                    }
+                    if (*it == '\' && it + 1 != end(content) && *(it + 1) == '"') {
+                        it += 2;
+                    } else {
+                        it++;
+                    }
+                } else if (single_quotes) {
+                    if (it == end(content)) {
+                        # TODO: Error unclosed quotes
+                    }
+                    if (*it == '\' && it + 1 != end(content) && *(it + 1) == ''') {
+                        it += 2;
+                    } else {
+                        it++;
+                    }
+                } else {
+                    if (it != end(content)) {
+                        switch (*it) {
+                            case '"': double_quotes = True;
+                            case ''': single_quotes = True;
+                            case ' ': done = True;
+                            case 13: done = True;
+                            case 10: done = True;
+                            default: it++;
+                        }
+                    }
+                }
+
+                if (it == end(content))
+                    done = True;
+            }
+        } else {
+            break;
+        }
+        tokenized.push_back(content.sub(start, it));
+    }
+    return parse_command(tokenized);
 }
 
 # Parses the vector of bytes to get a Command object
