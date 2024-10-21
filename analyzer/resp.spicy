@@ -124,3 +124,11 @@ type Set = unit {
     # TODO: This should be a set but doesn't go in the backed C++ set
     elements: Data[self.num_elements];
 };
+
+on Data::%done {
+    spicy::accept_input();
+}
+
+on Data::%error {
+    spicy::decline_input("error while parsing RESP data");
+}
