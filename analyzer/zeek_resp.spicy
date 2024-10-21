@@ -4,16 +4,6 @@
 module Zeek_RESP;
 
 import RESP;
-import zeek;
-
-# Any error bubbling up to the top unit will trigger a protocol rejection.
-on RESP::Data::%done {
-    zeek::confirm_protocol();
-}
-
-on RESP::Data::%error {
-    zeek::reject_protocol("error while parsing RESP data");
-}
 
 type KnownCommand = enum {
     APPEND,
