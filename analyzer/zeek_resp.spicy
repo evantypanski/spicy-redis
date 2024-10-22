@@ -82,33 +82,28 @@ public function make_command(arr: RESP::Array): Command {
     return parse_command(v);
 }
 
-const WhiteSpace = /[ \t\n]+/;
-
 public function unserialized_command(unserialized: RESP::Data): Command {
     # Only call this if it's unserialized :)
     assert unserialized?.not_serialized;
-    local content = unserialized.not_serialized;
 
     local tokenized: vector<bytes>;
-    local current: bytes = b"";
-    local double_quotes = False;
-    local single_quotes = False;
-    local it = content.at(0);
+    local it = unserialized.not_serialized.at(0);
+    # Redis whitespace characters are null, tab, LF, CR, and space
+    local whitespace = set<uint8>(0, 9, 10, 13, 32);
     # Note: this logic is a bit different from Redis. Hopefully it doesn't matter
     while (True) {
-        while (it != end(content) && (*it == ' ' || *it == 10 || *it == 13)) {
+        while (it != end(unserialized.not_serialized) && ((*it) in whitespace))
             it++;
-        }
 
         # Get a token
         local start = it;
-        if (it != end(content)) {
+        if (it != end(unserialized.not_serialized)) {
             local double_quotes = False;
             local single_quotes = False;
             local done = False;
             while (!done) {
                 if (double_quotes) {
-                    if (*it == '\' && it + 1 != end(content) && *(it + 1) == '"') {
+                    if (*it == '\' && it + 1 != end(unserialized.not_serialized) && *(it + 1) == '"') {
                         # Skip one, then later we skip another
                         it++;
                     } else if (*it == '"') {
@@ -117,7 +112,7 @@ public function unserialized_command(unserialized: RESP::Data): Command {
 
                     it++;
                 } else if (single_quotes) {
-                    if (*it == '\' && it + 1 != end(content) && *(it + 1) == ''') {
+                    if (*it == '\' && it + 1 != end(unserialized.not_serialized) && *(it + 1) == ''') {
                         # Skip one, then later we skip another
                         it++;
                     } else if (*it == ''') {
@@ -126,14 +121,14 @@ public function unserialized_command(unserialized: RESP::Data): Command {
 
                     it++;
                 } else {
-                    if (it != end(content)) {
+                    if (it != end(unserialized.not_serialized)) {
                         switch (*it) {
                             case '"': double_quotes = True;
                             case ''': single_quotes = True;
-                            case ' ',
-                                 13,
-                                 10: done = True;
-                            default: ();
+                            default: {
+                                if ((*it) in whitespace)
+                                    done = True;
+                            }
                         }
 
                         if (!done)
@@ -141,17 +136,17 @@ public function unserialized_command(unserialized: RESP::Data): Command {
                     }
                 }
 
-                if (it == end(content)) {
+                if (it == end(unserialized.not_serialized)) {
                     done = True;
                     # If we're still in quotes, that's weird, but not really too bad.
                     if (double_quotes || single_quotes)
-                        zeek::weird("unbalanced_quotes", "unbalanced quotes in inline buffer: '" + content.sub(start, it).decode() + "'");
+                        zeek::weird("unbalanced_quotes", "unbalanced quotes in inline buffer: '" + unserialized.not_serialized.sub(start, it).decode() + "'");
                 }
             }
         } else {
             break;
         }
-        tokenized.push_back(content.sub(start, it));
+        tokenized.push_back(unserialized.not_serialized.sub(start, it));
     }
     return parse_command(tokenized);
 }
@@ -315,8 +310,6 @@ bool, >;
 
 public function make_set(arr: RESP::Array): Set {
     assert arr.num_elements >= 3 : "Must have at least 3 elements in SET";
-    local key = arr.elements[1].bulk_string.content;
-    local value = arr.elements[2].bulk_string.content;
     local nx = False;
     local xx = False;
     local get = False;
@@ -334,8 +327,7 @@ public function make_set(arr: RESP::Array): Set {
             continue;
         }
 
-        local content = arr.elements[i].bulk_string.content;
-        switch (content.lower()) {
+        switch (arr.elements[i].bulk_string.content.lower()) {
             case b"nx": nx = True;
             case b"xx": xx = True;
             case b"get": get = True;
@@ -343,29 +335,25 @@ public function make_set(arr: RESP::Array): Set {
                 ++i;
                 if (i >= elements || !arr.elements[i]?.bulk_string)
                     break;
-                local inner = arr.elements[i].bulk_string.content;
-                ex = inner.to_uint();
+                ex = arr.elements[i].bulk_string.content.to_uint();
             }
             case b"px": {
                 ++i;
                 if (i >= elements || !arr.elements[i]?.bulk_string)
                     break;
-                local inner = arr.elements[i].bulk_string.content;
-                px = inner.to_uint();
+                px = arr.elements[i].bulk_string.content.to_uint();
             }
             case b"exat": {
                 ++i;
                 if (i >= elements || !arr.elements[i]?.bulk_string)
                     break;
-                local inner = arr.elements[i].bulk_string.content;
-                exat = inner.to_uint();
+                exat = arr.elements[i].bulk_string.content.to_uint();
             }
             case b"pxat": {
                 ++i;
                 if (i >= elements || !arr.elements[i]?.bulk_string)
                     break;
-                local inner = arr.elements[i].bulk_string.content;
-                pxat = inner.to_uint();
+                pxat = arr.elements[i].bulk_string.content.to_uint();
             }
             case b"keepttl": keep_ttl = True;
             default: ();
@@ -373,7 +361,7 @@ public function make_set(arr: RESP::Array): Set {
 
         ++i;
     }
-    return (key, value, nx, xx, get, ex, px, exat, pxat, keep_ttl);
+    return (arr.elements[1].bulk_string.content, arr.elements[2].bulk_string.content, nx, xx, get, ex, px, exat, pxat, keep_ttl);
 }
 
 # Convenience method to avoid comparison with an optional in the evt
@@ -382,13 +370,10 @@ public function is_set(arr: RESP::Array): bool {
     if (arr.num_elements < 3)
         return False;
 
-    local first = arr.elements[0];
-    if (!first?.bulk_string)
+    if (!arr.elements[0]?.bulk_string)
         return False;
 
-    local cmd_bytes = first.bulk_string.content;
-
-    local cmd = command_from(cmd_bytes);
+    local cmd = command_from(arr.elements[0].bulk_string.content);
     return cmd && (*cmd == KnownCommand::SET);
 }
 
@@ -404,12 +389,9 @@ public function is_get(arr: RESP::Array): bool {
     if (arr.num_elements != 2)
         return False;
 
-    local first = arr.elements[0];
-    if (!first?.bulk_string)
+    if (!arr.elements[0]?.bulk_string)
         return False;
 
-    local cmd_bytes = first.bulk_string.content;
-
-    local cmd = command_from(cmd_bytes);
+    local cmd = command_from(arr.elements[0].bulk_string.content);
     return cmd && (*cmd == KnownCommand::GET);
 }
