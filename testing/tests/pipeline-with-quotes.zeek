@@ -3,5 +3,6 @@
 # @TEST-EXEC: zeek -Cr ${TRACES}/pipeline-quotes.trace ${PACKAGE} %INPUT >output
 # @TEST-EXEC: btest-diff output
 # @TEST-EXEC: btest-diff resp.log
+# @TEST-EXEC: btest-diff weird.log
 
 # Tests unserialized data where quotes should make one token

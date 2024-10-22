@@ -7,8 +7,12 @@
 #open XXXX-XX-XX-XX-XX-XX
 #fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	cmd.command	cmd.key	cmd.value
 #types	time	string	addr	port	addr	port	string	string	string
-XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	::1	58686	::1	6379	SET	key	"my value with spaces"
-XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	::1	58686	::1	6379	SET	key2	'my value with single quotes'
-XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	::1	58686	::1	6379	SET	key3	'my value with "double" inners'
-XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	::1	58686	::1	6379	SET	key4	"my value with 'single' inners"
+XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	::1	63754	::1	6379	SET	key	"my value with spaces"
+XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	::1	63754	::1	6379	SET	key2	'my value with single quotes'
+XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	::1	63754	::1	6379	SET	key3	'my value with "double" inners'
+XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	::1	63754	::1	6379	SET	key4	"my value with 'single' inners"
+XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	::1	63754	::1	6379	SET	key5	"my value with \\"escaped\\" quotes"
+XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	::1	63754	::1	6379	SET	key6	'my value with \\'escaped\\' quotes'
+XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	::1	63754	::1	6379	SET	bad1	"unclosed double quotes
+XXXXXXXXXX.XXXXXX	ClEkJM2Vm5giqnMf4h	::1	63754	::1	6379	SET	bad2	'unclosed single quotes
 #close XXXX-XX-XX-XX-XX-XX

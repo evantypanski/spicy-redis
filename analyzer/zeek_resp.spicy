@@ -5,6 +5,8 @@ module Zeek_RESP;
 
 import RESP;
 
+import zeek;
+
 type KnownCommand = enum {
     APPEND,
     BITCOUNT,
@@ -106,38 +108,45 @@ public function unserialized_command(unserialized: RESP::Data): Command {
             local done = False;
             while (!done) {
                 if (double_quotes) {
-                    if (it == end(content)) {
-                        # TODO: Error unclosed quotes
-                    }
                     if (*it == '\' && it + 1 != end(content) && *(it + 1) == '"') {
-                        it += 2;
-                    } else {
+                        # Skip one, then later we skip another
                         it++;
+                    } else if (*it == '"') {
+                        double_quotes = False;
                     }
+
+                    it++;
                 } else if (single_quotes) {
-                    if (it == end(content)) {
-                        # TODO: Error unclosed quotes
-                    }
                     if (*it == '\' && it + 1 != end(content) && *(it + 1) == ''') {
-                        it += 2;
-                    } else {
+                        # Skip one, then later we skip another
                         it++;
+                    } else if (*it == ''') {
+                        single_quotes = False;
                     }
+
+                    it++;
                 } else {
                     if (it != end(content)) {
                         switch (*it) {
                             case '"': double_quotes = True;
                             case ''': single_quotes = True;
-                            case ' ': done = True;
-                            case 13: done = True;
-                            case 10: done = True;
-                            default: it++;
+                            case ' ',
+                                 13,
+                                 10: done = True;
+                            default: ();
                         }
+
+                        if (!done)
+                            it++;
                     }
                 }
 
-                if (it == end(content))
+                if (it == end(content)) {
                     done = True;
+                    # If we're still in quotes, that's weird, but not really too bad.
+                    if (double_quotes || single_quotes)
+                        zeek::weird("unbalanced_quotes", "unbalanced quotes in inline buffer: '" + content.sub(start, it).decode() + "'");
+                }
             }
         } else {
             break;
