@@ -1,6 +1,6 @@
 module RESP;
 
-import Zeek_RESP;
+import Redis;
 
 import spicy;
 
@@ -30,10 +30,10 @@ public type ClientData = unit {
         inline: RedisBytes &convert=(pack(cast<uint8>(self.ty), spicy::ByteOrder::Network) + $$) &max-size=1024;
     };
 
-    var command: Zeek_RESP::Command;
+    var command: Redis::Command;
 
     on %done {
-        self.command = Zeek_RESP::make_command(self);
+        self.command = Redis::make_command(self);
     }
 };
 

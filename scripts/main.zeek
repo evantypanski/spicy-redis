@@ -1,12 +1,12 @@
 @load base/protocols/conn/removal-hooks
 
-module RESP;
+module Redis;
 
 export {
 	## Log stream identifier.
 	redef enum Log::ID += { LOG };
 
-	## The ports to register RESP for.
+	## The ports to register Redis for.
 	const ports = { 6379/tcp } &redef;
 
 	type SetCommand: record {
@@ -37,10 +37,10 @@ export {
 		## The value, if this command is known to have a value
 		value: string &log &optional;
 		## The command in an enum if it was known
-		known: Zeek_RESP::KnownCommand &optional;
+		known: Redis::KnownCommand &optional;
 	};
 
-	## Record type containing the column fields of the RESP log.
+	## Record type containing the column fields of the Redis log.
 	type Info: record {
 		## Timestamp for when the activity happened.
 		ts: time &log;
@@ -55,7 +55,7 @@ export {
 	## A default logging policy hook for the stream.
 	global log_policy: Log::PolicyHook;
 
-	## Default hook into RESP logging.
+	## Default hook into Redis logging.
 	global log_resp: event(rec: Info);
 }
 
@@ -71,18 +71,18 @@ redef likely_server_ports += { ports };
 #
 # function get_file_handle(c: connection, is_orig: bool): string
 #   {
-#   return cat(Analyzer::ANALYZER_SPICY_RESP, c$start_time, c$id, is_orig);
+#   return cat(Analyzer::ANALYZER_SPICY_REDIS, c$start_time, c$id, is_orig);
 #   }
 
 event zeek_init() &priority=5
 	{
-	Log::create_stream(RESP::LOG, [ $columns=Info, $ev=log_resp, $path="resp",
+	Log::create_stream(Redis::LOG, [ $columns=Info, $ev=log_resp, $path="resp",
 	    $policy=log_policy ]);
 
-	Analyzer::register_for_ports(Analyzer::ANALYZER_SPICY_RESP, ports);
+	Analyzer::register_for_ports(Analyzer::ANALYZER_SPICY_REDIS, ports);
 
 	# TODO: To activate the file handle function above, uncomment this.
-	# Files::register_protocol(Analyzer::ANALYZER_SPICY_RESP, [$get_file_handle=RESP::get_file_handle ]);
+	# Files::register_protocol(Analyzer::ANALYZER_SPICY_REDIS, [$get_file_handle=Redis::get_file_handle ]);
 	}
 
 # Initialize logging state.
@@ -99,11 +99,11 @@ function emit_log(c: connection)
 	if ( ! c?$redis_resp )
 		return;
 
-	Log::write(RESP::LOG, c$redis_resp);
+	Log::write(Redis::LOG, c$redis_resp);
 	delete c$redis_resp;
 	}
 
-event RESP::command(c: connection, is_orig: bool, command: Command)
+event Redis::command(c: connection, is_orig: bool, command: Command)
 	{
 	hook set_session(c, command);
 

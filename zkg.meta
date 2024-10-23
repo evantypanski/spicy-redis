@@ -1,7 +1,7 @@
 [package]
 script_dir = scripts
 test_command = cd testing && btest -c btest.cfg
-summary = Spicy-based analyzer for the Redis Serialization Protocol (RESP)
+summary = Spicy-based analyzer for the Redis Serialization Protocol (RESP) and Redis
 description = Spicy-based analyzer for the Redis Serialization Protocol
 depends = 
 	zeek >=4.0.0
@@ -15,7 +15,7 @@ features = spicy-protocol-analyzer
 
 [template_vars]
 name = spicy-resp
-analyzer = RESP
+analyzer = Redis
 protocol = TCP
 unit_orig = Data
 unit_resp = Data
