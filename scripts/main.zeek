@@ -36,6 +36,8 @@ export {
 		key: string &log &optional;
 		## The value, if this command is known to have a value
 		value: string &log &optional;
+		## The command in an enum if it was known
+		known: Zeek_RESP::KnownCommand &optional;
 	};
 
 	## Record type containing the column fields of the RESP log.

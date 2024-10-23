@@ -1,5 +1,7 @@
 module RESP;
 
+import Zeek_RESP;
+
 import spicy;
 
 # Maximum size for parsing of certain fields. By restricting this we avoid
@@ -27,6 +29,13 @@ public type ClientData = unit {
     } else {
         inline: RedisBytes &convert=(pack(cast<uint8>(self.ty), spicy::ByteOrder::Network) + $$) &max-size=1024;
     };
+
+    var command: optional<Zeek_RESP::Command>;
+
+    on %done {
+        self.command = Zeek_RESP::make_command(self);
+        print self;
+    }
 };
 
 public type ServerData = unit {

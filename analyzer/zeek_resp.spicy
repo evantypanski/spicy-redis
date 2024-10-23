@@ -5,9 +5,9 @@ module Zeek_RESP;
 
 import RESP;
 
-import zeek;
+#import zeek;
 
-type KnownCommand = enum {
+public type KnownCommand = enum {
     APPEND,
     BITCOUNT,
     BITFIELD,
@@ -49,15 +49,13 @@ type KnownCommand = enum {
     TYPE,
 };
 
-type Command = tuple<
-# raw command
-vector<bytes>,
-# command
-bytes,
-# key
-optional<bytes>,
-# value
-optional<bytes>, >;
+type Command = struct {
+    raw: vector<bytes>;
+    command: bytes;
+    key: optional<bytes>;
+    value: optional<bytes>;
+    known: optional<KnownCommand>;
+};
 
 # This just assumes all elements in the array is a bulk string and puts them in a vector
 public function make_command(command: RESP::ClientData): Command {
@@ -135,8 +133,8 @@ public function inline_command(command: RESP::ClientData): Command {
                 if (it == end(command.inline)) {
                     done = True;
                     # If we're still in quotes, that's weird, but not really too bad.
-                    if (double_quotes || single_quotes)
-                        zeek::weird("unbalanced_quotes", "unbalanced quotes in inline buffer: '" + command.inline.sub(start, it).decode() + "'");
+                    #if (double_quotes || single_quotes)
+                    #    zeek::weird("unbalanced_quotes", "unbalanced quotes in inline buffer: '" + command.inline.sub(start, it).decode() + "'");
                 }
             }
         } else {
@@ -150,15 +148,15 @@ public function inline_command(command: RESP::ClientData): Command {
 # Parses the vector of bytes to get a Command object
 function parse_command(raw: vector<bytes>): Command {
     assert |raw| >= 1;
-    local parsed: Command = (raw, raw[0], Null, Null);
     local cmd = command_from(raw[0]);
+    local parsed: Command = [$raw = raw, $command = raw[0], $key = Null, $value = Null, $known = cmd];
     if (!cmd)
         return parsed;
 
     if (|raw| >= 2) {
         switch (*cmd) {
             case KnownCommand::KEYS:
-                parsed[3] = raw[1];
+                parsed.key = raw[1];
             case KnownCommand::APPEND,
                  KnownCommand::BITCOUNT,
                  KnownCommand::BITFIELD,
@@ -195,7 +193,7 @@ function parse_command(raw: vector<bytes>): Command {
                  KnownCommand::STRLEN,
                  KnownCommand::TTL,
                  KnownCommand::TYPE:
-                parsed[2] = raw[1];
+                parsed.key = raw[1];
             default: ();
         }
     }
@@ -215,9 +213,9 @@ function parse_command(raw: vector<bytes>): Command {
                  KnownCommand::MOVE,
                  KnownCommand::MSET,
                  KnownCommand::RENAME:
-                parsed[3] = raw[2];
+                parsed.value = raw[2];
             # Op first, destination second, then a list of keys. Just log dest
-            case KnownCommand::BITOP: parsed[2] = raw[2];
+            case KnownCommand::BITOP: parsed.key = raw[2];
             default: ();
         }
     }
@@ -225,7 +223,7 @@ function parse_command(raw: vector<bytes>): Command {
     if (|raw| >= 4) {
         switch (*cmd) {
             # timeout, numkeys, then key
-            case KnownCommand::BLMPOP: parsed[2] = raw[3];
+            case KnownCommand::BLMPOP: parsed.key = raw[3];
             default: ();
         }
     }
@@ -305,7 +303,9 @@ optional<uint64>,
 bool, >;
 
 public function make_set(command: Command): Set {
-    assert |command[0]| >= 3 : "Must have at least 3 elements in SET";
+    assert |command.raw| >= 3 : "Must have at least 3 elements in SET";
+    assert command.key : "SET must validate a key";
+    assert command.value : "SET must validate a value";
     local nx = False;
     local xx = False;
     local get = False;
@@ -315,34 +315,34 @@ public function make_set(command: Command): Set {
     local pxat: optional<uint64> = Null;
     local keep_ttl = False;
     local i = 3;
-    while (i < |command[0]|) {
-        switch (command[0][i].lower()) {
+    while (i < |command.raw|) {
+        switch (command.raw[i].lower()) {
             case b"nx": nx = True;
             case b"xx": xx = True;
             case b"get": get = True;
             case b"ex": {
                 ++i;
-                if (i >= |command[0]|)
+                if (i >= |command.raw|)
                     break;
-                ex = command[0][i].to_uint();
+                ex = command.raw[i].to_uint();
             }
             case b"px": {
                 ++i;
-                if (i >= |command[0]|)
+                if (i >= |command.raw|)
                     break;
-                px = command[0][i].to_uint();
+                px = command.raw[i].to_uint();
             }
             case b"exat": {
                 ++i;
-                if (i >= |command[0]|)
+                if (i >= |command.raw|)
                     break;
-                exat = command[0][i].to_uint();
+                exat = command.raw[i].to_uint();
             }
             case b"pxat": {
                 ++i;
-                if (i >= |command[0]|)
+                if (i >= |command.raw|)
                     break;
-                pxat = command[0][i].to_uint();
+                pxat = command.raw[i].to_uint();
             }
             case b"keepttl": keep_ttl = True;
             default: ();
@@ -350,26 +350,22 @@ public function make_set(command: Command): Set {
 
         ++i;
     }
-    return (command[0][1], command[0][2], nx, xx, get, ex, px, exat, pxat, keep_ttl);
+    return (*command.key, *command.value, nx, xx, get, ex, px, exat, pxat, keep_ttl);
 }
 
 # Convenience method to avoid comparison with an optional in the evt
 public function is_set(data: RESP::ClientData): bool {
-    # TODO: make_command bad (it's repeated a lot), I just wanted this to be easier
-    local cmd = make_command(data);
-    # TODO: The command tuple could probably store the known command enum val
-    return cmd[1].upper() == b"SET" && |cmd[0]| >= 3 && cmd[2] && cmd[3];
+    assert data.command : "Command wasn't set when parsing complete";
+    return (*data.command).known && *((*data.command).known) == KnownCommand::SET && (*data.command).key && (*data.command).value;
 }
 
 type Get = tuple<bytes>;
 
 public function make_get(command: Command): Get {
-    return (command[0][1], );
+    return (command.raw[1], );
 }
 
-# Convenience method to avoid comparison with an optional in the evt
 public function is_get(data: RESP::ClientData): bool {
-    local cmd = make_command(data);
-    # TODO: The command tuple could probably store the known command enum val
-    return cmd[1].upper() == b"GET" && |cmd[0]| >= 2;
+    assert data.command : "Command wasn't set when parsing complete";
+    return (*data.command).known && *((*data.command).known) == KnownCommand::GET && |(*data.command).raw| >= 2;
 }
