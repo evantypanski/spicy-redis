@@ -10,6 +10,30 @@ public type Messages = unit {
     : (Data &synchronize)[];
 };
 
+public type ClientMessages = unit {
+    : (ClientData &synchronize)[];
+};
+
+public type ServerMessages = unit {
+    : (ServerData &synchronize)[];
+};
+
+public type ClientData = unit {
+    %synchronize-after = b"\x0d\x0a";
+    # Clients can only be an array or inline
+    ty: uint8 &convert=DataType($$);
+    if (self.ty == DataType::ARRAY) {
+        multibulk: Array;
+    } else {
+        inline: RedisBytes &convert=(pack(cast<uint8>(self.ty), spicy::ByteOrder::Network) + $$) &max-size=1024;
+    };
+};
+
+public type ServerData = unit {
+    %synchronize-after = b"\x0d\x0a";
+    data: Data;
+};
+
 public type Data = unit {
     %synchronize-after = b"\x0d\x0a";
     ty: uint8 &convert=DataType($$);

@@ -49,17 +49,6 @@ type KnownCommand = enum {
     TYPE,
 };
 
-# Determines whether the structure of the array is a command. A command is just an array
-# of bulk strings, so that's what we're looking for.
-#
-# TODO: Really commands will only go from client->server, so maybe encode that somehow?
-public function is_command(arr: RESP::Array): bool {
-    if (arr.num_elements < 1)
-        return False;
-
-    return True;
-}
-
 type Command = tuple<
 # raw command
 vector<bytes>,
@@ -71,9 +60,16 @@ optional<bytes>,
 optional<bytes>, >;
 
 # This just assumes all elements in the array is a bulk string and puts them in a vector
-public function make_command(arr: RESP::Array): Command {
+public function make_command(command: RESP::ClientData): Command {
+    if (command?.multibulk)
+        return bulk_command(command);
+    else
+        return inline_command(command);
+}
+
+public function bulk_command(command: RESP::ClientData): Command {
     local v: vector<bytes>;
-    for (ele in arr.elements) {
+    for (ele in command.multibulk.elements) {
         # TODO: Stringify the other data too. Apparently commands *can* have other stuff
         # such as SUBSCRIBE, which will magically put an integer after it.
         if (ele?.bulk_string)
@@ -82,28 +78,28 @@ public function make_command(arr: RESP::Array): Command {
     return parse_command(v);
 }
 
-public function unserialized_command(unserialized: RESP::Data): Command {
-    # Only call this if it's unserialized :)
-    assert unserialized?.not_serialized;
+public function inline_command(command: RESP::ClientData): Command {
+    # Only call this if it's inline :)
+    assert command?.inline;
 
     local tokenized: vector<bytes>;
-    local it = unserialized.not_serialized.at(0);
+    local it = command.inline.at(0);
     # Redis whitespace characters are null, tab, LF, CR, and space
     local whitespace = set<uint8>(0, 9, 10, 13, 32);
     # Note: this logic is a bit different from Redis. Hopefully it doesn't matter
     while (True) {
-        while (it != end(unserialized.not_serialized) && ((*it) in whitespace))
+        while (it != end(command.inline) && ((*it) in whitespace))
             it++;
 
         # Get a token
         local start = it;
-        if (it != end(unserialized.not_serialized)) {
+        if (it != end(command.inline)) {
             local double_quotes = False;
             local single_quotes = False;
             local done = False;
             while (!done) {
                 if (double_quotes) {
-                    if (*it == '\' && it + 1 != end(unserialized.not_serialized) && *(it + 1) == '"') {
+                    if (*it == '\' && it + 1 != end(command.inline) && *(it + 1) == '"') {
                         # Skip one, then later we skip another
                         it++;
                     } else if (*it == '"') {
@@ -112,7 +108,7 @@ public function unserialized_command(unserialized: RESP::Data): Command {
 
                     it++;
                 } else if (single_quotes) {
-                    if (*it == '\' && it + 1 != end(unserialized.not_serialized) && *(it + 1) == ''') {
+                    if (*it == '\' && it + 1 != end(command.inline) && *(it + 1) == ''') {
                         # Skip one, then later we skip another
                         it++;
                     } else if (*it == ''') {
@@ -121,7 +117,7 @@ public function unserialized_command(unserialized: RESP::Data): Command {
 
                     it++;
                 } else {
-                    if (it != end(unserialized.not_serialized)) {
+                    if (it != end(command.inline)) {
                         switch (*it) {
                             case '"': double_quotes = True;
                             case ''': single_quotes = True;
@@ -136,17 +132,17 @@ public function unserialized_command(unserialized: RESP::Data): Command {
                     }
                 }
 
-                if (it == end(unserialized.not_serialized)) {
+                if (it == end(command.inline)) {
                     done = True;
                     # If we're still in quotes, that's weird, but not really too bad.
                     if (double_quotes || single_quotes)
-                        zeek::weird("unbalanced_quotes", "unbalanced quotes in inline buffer: '" + unserialized.not_serialized.sub(start, it).decode() + "'");
+                        zeek::weird("unbalanced_quotes", "unbalanced quotes in inline buffer: '" + command.inline.sub(start, it).decode() + "'");
                 }
             }
         } else {
             break;
         }
-        tokenized.push_back(unserialized.not_serialized.sub(start, it));
+        tokenized.push_back(command.inline.sub(start, it));
     }
     return parse_command(tokenized);
 }
@@ -308,8 +304,8 @@ optional<uint64>,
 # KEEPTTL
 bool, >;
 
-public function make_set(arr: RESP::Array): Set {
-    assert arr.num_elements >= 3 : "Must have at least 3 elements in SET";
+public function make_set(command: Command): Set {
+    assert |command[0]| >= 3 : "Must have at least 3 elements in SET";
     local nx = False;
     local xx = False;
     local get = False;
@@ -319,41 +315,34 @@ public function make_set(arr: RESP::Array): Set {
     local pxat: optional<uint64> = Null;
     local keep_ttl = False;
     local i = 3;
-    local elements = cast<uint64>(arr.num_elements);
-    while (i < elements) {
-        # All array elements in a command will be a bulk string by default
-        if (!arr.elements[i]?.bulk_string) {
-            ++i;
-            continue;
-        }
-
-        switch (arr.elements[i].bulk_string.content.lower()) {
+    while (i < |command[0]|) {
+        switch (command[0][i].lower()) {
             case b"nx": nx = True;
             case b"xx": xx = True;
             case b"get": get = True;
             case b"ex": {
                 ++i;
-                if (i >= elements || !arr.elements[i]?.bulk_string)
+                if (i >= |command[0]|)
                     break;
-                ex = arr.elements[i].bulk_string.content.to_uint();
+                ex = command[0][i].to_uint();
             }
             case b"px": {
                 ++i;
-                if (i >= elements || !arr.elements[i]?.bulk_string)
+                if (i >= |command[0]|)
                     break;
-                px = arr.elements[i].bulk_string.content.to_uint();
+                px = command[0][i].to_uint();
             }
             case b"exat": {
                 ++i;
-                if (i >= elements || !arr.elements[i]?.bulk_string)
+                if (i >= |command[0]|)
                     break;
-                exat = arr.elements[i].bulk_string.content.to_uint();
+                exat = command[0][i].to_uint();
             }
             case b"pxat": {
                 ++i;
-                if (i >= elements || !arr.elements[i]?.bulk_string)
+                if (i >= |command[0]|)
                     break;
-                pxat = arr.elements[i].bulk_string.content.to_uint();
+                pxat = command[0][i].to_uint();
             }
             case b"keepttl": keep_ttl = True;
             default: ();
@@ -361,37 +350,26 @@ public function make_set(arr: RESP::Array): Set {
 
         ++i;
     }
-    return (arr.elements[1].bulk_string.content, arr.elements[2].bulk_string.content, nx, xx, get, ex, px, exat, pxat, keep_ttl);
+    return (command[0][1], command[0][2], nx, xx, get, ex, px, exat, pxat, keep_ttl);
 }
 
 # Convenience method to avoid comparison with an optional in the evt
-public function is_set(arr: RESP::Array): bool {
-    # SET key value
-    if (arr.num_elements < 3)
-        return False;
-
-    if (!arr.elements[0]?.bulk_string)
-        return False;
-
-    local cmd = command_from(arr.elements[0].bulk_string.content);
-    return cmd && (*cmd == KnownCommand::SET);
+public function is_set(data: RESP::ClientData): bool {
+    # TODO: make_command bad (it's repeated a lot), I just wanted this to be easier
+    local cmd = make_command(data);
+    # TODO: The command tuple could probably store the known command enum val
+    return cmd[1].upper() == b"SET" && |cmd[0]| >= 3 && cmd[2] && cmd[3];
 }
 
 type Get = tuple<bytes>;
 
-public function make_get(arr: RESP::Array): Get {
-    return (arr.elements[1].bulk_string.content, );
+public function make_get(command: Command): Get {
+    return (command[0][1], );
 }
 
 # Convenience method to avoid comparison with an optional in the evt
-public function is_get(arr: RESP::Array): bool {
-    # GET key
-    if (arr.num_elements != 2)
-        return False;
-
-    if (!arr.elements[0]?.bulk_string)
-        return False;
-
-    local cmd = command_from(arr.elements[0].bulk_string.content);
-    return cmd && (*cmd == KnownCommand::GET);
+public function is_get(data: RESP::ClientData): bool {
+    local cmd = make_command(data);
+    # TODO: The command tuple could probably store the known command enum val
+    return cmd[1].upper() == b"GET" && |cmd[0]| >= 2;
 }

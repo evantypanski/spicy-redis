@@ -1,16 +1,14 @@
 protocol analyzer spicy::RESP over TCP:
-    parse with RESP::Messages,
+    parse originator with RESP::ClientMessages,
+    parse responder with RESP::ServerMessages,
     port 6379/tcp;
 
 import RESP;
 import Zeek_RESP;
 
-on RESP::Array if ( Zeek_RESP::is_set(self) ) -> event RESP::set_command($conn, $is_orig, Zeek_RESP::make_set(self));
-on RESP::Array if ( Zeek_RESP::is_get(self) ) -> event RESP::get_command($conn, $is_orig, Zeek_RESP::make_get(self));
+# TODO: These should be a bit nicer with how they make commands, lotta wasted work
+on RESP::ClientData if ( Zeek_RESP::is_set(self) ) -> event RESP::set_command($conn, $is_orig, Zeek_RESP::make_set(Zeek_RESP::make_command(self)));
+on RESP::ClientData if ( Zeek_RESP::is_get(self) ) -> event RESP::get_command($conn, $is_orig, Zeek_RESP::make_get(Zeek_RESP::make_command(self)));
 
-# Generic catch-all for commands. A command is an array of bulk strings, so we hope that
-# this will catch those, but the server can provide that as well.
-on RESP::Array if ( Zeek_RESP::is_command(self) ) -> event RESP::command($conn, $is_orig, Zeek_RESP::make_command(self));
-
-# These are from commands that weren't serialized
-on RESP::Data if ( self?.not_serialized ) -> event RESP::command($conn, $is_orig, Zeek_RESP::unserialized_command(self));
+# All client data is a command
+on RESP::ClientData -> event RESP::command($conn, $is_orig, Zeek_RESP::make_command(self));
