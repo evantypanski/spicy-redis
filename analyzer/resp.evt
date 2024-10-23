@@ -8,8 +8,8 @@ import Zeek_RESP;
 
 export Zeek_RESP::KnownCommand;
 
-on RESP::ClientData if ( Zeek_RESP::is_set(self) ) -> event RESP::set_command($conn, $is_orig, Zeek_RESP::make_set(*self.command));
-on RESP::ClientData if ( Zeek_RESP::is_get(self) ) -> event RESP::get_command($conn, $is_orig, Zeek_RESP::make_get(*self.command));
+on RESP::ClientData if ( Zeek_RESP::is_set(self) ) -> event RESP::set_command($conn, $is_orig, Zeek_RESP::make_set(self.command));
+on RESP::ClientData if ( Zeek_RESP::is_get(self) ) -> event RESP::get_command($conn, $is_orig, Zeek_RESP::make_get(self.command));
 
 # All client data is a command
-on RESP::ClientData -> event RESP::command($conn, $is_orig, *self.command);
+on RESP::ClientData -> event RESP::command($conn, $is_orig, self.command);

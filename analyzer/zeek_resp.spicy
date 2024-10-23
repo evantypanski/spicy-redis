@@ -353,10 +353,8 @@ public function make_set(command: Command): Set {
     return (*command.key, *command.value, nx, xx, get, ex, px, exat, pxat, keep_ttl);
 }
 
-# Convenience method to avoid comparison with an optional in the evt
 public function is_set(data: RESP::ClientData): bool {
-    assert data.command : "Command wasn't set when parsing complete";
-    return (*data.command).known && *((*data.command).known) == KnownCommand::SET && (*data.command).key && (*data.command).value;
+    return data.command.known && *(data.command.known) == KnownCommand::SET && data.command.key && data.command.value;
 }
 
 type Get = tuple<bytes>;
@@ -366,6 +364,5 @@ public function make_get(command: Command): Get {
 }
 
 public function is_get(data: RESP::ClientData): bool {
-    assert data.command : "Command wasn't set when parsing complete";
-    return (*data.command).known && *((*data.command).known) == KnownCommand::GET && |(*data.command).raw| >= 2;
+    return data.command.known && *(data.command.known) == KnownCommand::GET && |data.command.raw| >= 2;
 }
