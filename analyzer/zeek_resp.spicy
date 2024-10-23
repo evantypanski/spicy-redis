@@ -53,7 +53,7 @@ type Command = struct {
     raw: vector<bytes>;
     command: bytes;
     key: optional<bytes>;
-    value: optional<bytes>;
+    value:optional<bytes>;
     known: optional<KnownCommand>;
 };
 
@@ -280,87 +280,74 @@ function command_from(cmd_bytes: bytes): optional<KnownCommand> {
     return cmd;
 }
 
-type Set = tuple<
-# key
-bytes,
-# value
-bytes,
-# NX
-bool,
-# XX
-bool,
-# GET
-bool,
-# EX
-optional<uint64>,
-# PX
-optional<uint64>,
-# EXAT
-optional<uint64>,
-# PXAT
-optional<uint64>,
-# KEEPTTL
-bool, >;
+type Set = struct {
+    key: bytes;
+    value: bytes;
+    nx: bool &default=False;
+    xx: bool &default=False;
+    get: bool &default=False;
+    ex: optional<uint64> &default=Null;
+    px: optional<uint64> &default=Null;
+    exat: optional<uint64> &default=Null;
+    pxat: optional<uint64> &default=Null;
+    keep_ttl: bool &default=False;
+};
 
 public function make_set(command: Command): Set {
     assert |command.raw| >= 3 : "Must have at least 3 elements in SET";
     assert command.key : "SET must validate a key";
     assert command.value : "SET must validate a value";
-    local nx = False;
-    local xx = False;
-    local get = False;
-    local ex: optional<uint64> = Null;
-    local px: optional<uint64> = Null;
-    local exat: optional<uint64> = Null;
-    local pxat: optional<uint64> = Null;
-    local keep_ttl = False;
+    local parsed: Set = [$key = *command.key, $value = *command.value];
     local i = 3;
     while (i < |command.raw|) {
         switch (command.raw[i].lower()) {
-            case b"nx": nx = True;
-            case b"xx": xx = True;
-            case b"get": get = True;
+            case b"nx": parsed.nx = True;
+            case b"xx": parsed.xx = True;
+            case b"get": parsed.get = True;
             case b"ex": {
                 ++i;
                 if (i >= |command.raw|)
                     break;
-                ex = command.raw[i].to_uint();
+                parsed.ex = command.raw[i].to_uint();
             }
             case b"px": {
                 ++i;
                 if (i >= |command.raw|)
                     break;
-                px = command.raw[i].to_uint();
+                parsed.px = command.raw[i].to_uint();
             }
             case b"exat": {
                 ++i;
                 if (i >= |command.raw|)
                     break;
-                exat = command.raw[i].to_uint();
+                parsed.exat = command.raw[i].to_uint();
             }
             case b"pxat": {
                 ++i;
                 if (i >= |command.raw|)
                     break;
-                pxat = command.raw[i].to_uint();
+                parsed.pxat = command.raw[i].to_uint();
             }
-            case b"keepttl": keep_ttl = True;
+            case b"keepttl": parsed.keep_ttl = True;
             default: ();
         }
 
         ++i;
     }
-    return (*command.key, *command.value, nx, xx, get, ex, px, exat, pxat, keep_ttl);
+    return parsed;
 }
 
 public function is_set(data: RESP::ClientData): bool {
     return data.command.known && *(data.command.known) == KnownCommand::SET && data.command.key && data.command.value;
 }
 
-type Get = tuple<bytes>;
+type Get = struct {
+    key: bytes;
+};
 
 public function make_get(command: Command): Get {
-    return (command.raw[1], );
+    assert command.key : "GET must validate a key";
+    return [$key = *command.key];
 }
 
 public function is_get(data: RESP::ClientData): bool {
