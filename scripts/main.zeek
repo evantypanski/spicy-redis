@@ -110,3 +110,9 @@ event Redis::command(c: connection, is_orig: bool, command: Command)
 	local info = c$redis_resp;
 	emit_log(c);
 	}
+
+event Redis::server_data(c: connection, is_orig: bool, data: Zeek_Redis::ZeekServerData)
+	{
+	# TODO: This should use set_session or something to associate server data with
+	# commands.
+	}
