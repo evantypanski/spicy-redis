@@ -76,6 +76,10 @@ export {
 		current_request:  count &default=0;
 		## Current response in the pending queue.
 		current_response: count &default=0;
+		## Ranges where we do not expect a response
+		## Each range is one or two elements, one meaning it's unbounded, two meaning
+		## it begins at one and ends at the second.
+		no_response_ranges: vector of vector of count;
 	};
 
 }
@@ -153,10 +157,63 @@ event Redis::command(c: connection, is_orig: bool, command: Command)
 		c$redis_state = s;
 		Conn::register_removal_hook(c, finalize_redis);
 		}
+
 	++c$redis_state$current_request;
+	if ( command?$known && command$known == KnownCommand_CLIENT )
+		{
+		# All 3 CLIENT commands we care about have 3 elements
+		if ( |command$raw| == 3 )
+			{
+			if ( to_lower(command$raw[2]) == "on" )
+				{
+				# If the last range is open, close it here. Otherwise, noop
+				if  ( |c$redis_state$no_response_ranges| > 0 )
+					{
+					local range = c$redis_state$no_response_ranges[|c$redis_state$no_response_ranges| - 1];
+					if ( |range| == 1 )
+						{
+						range += c$redis_state$current_request;
+						}
+					}
+				}
+			if ( to_lower(command$raw[2]) == "off" )
+				{
+				# Only add a new interval if the last one is closed
+				if  ( |c$redis_state$no_response_ranges| == 0 || |c$redis_state$no_response_ranges[|c$redis_state$no_response_ranges| - 1]| != 1)
+					{
+					c$redis_state$no_response_ranges += vector(c$redis_state$current_request);
+					}
+				}
+			if ( to_lower(command$raw[2]) == "skip" )
+				{
+				# TODO: Test logic here, what if it's off the skip - does it close the
+				# next one? For now this just introduces a new range of length 1
+				c$redis_state$no_response_ranges += vector(c$redis_state$current_request, c$redis_state$current_request + 1);
+				}
+			}
+		}
 	set_state(c, T);
 
 	c$redis_resp$cmd = command;
+	}
+
+## Gets the next response number based on a connection. This is necessary since
+## some responses may have been skipped.
+function response_num(c: connection): count
+	{
+	local resp_num = c$redis_state$current_response + 1;
+	for ( i in c$redis_state$no_response_ranges )
+		{
+		local range = c$redis_state$no_response_ranges[i];
+		assert |range| >= 1;
+		if ( |range| == 1 && resp_num > range[0] )
+			{} # TODO: This is necessary if not using pipelining
+		if ( |range| == 2 && resp_num >= range[0]  && resp_num < range[1] )
+			return range[1];
+		}
+
+	# Default: no disable/enable shenanigans
+	return resp_num;
 	}
 
 event Redis::server_data(c: connection, is_orig: bool, data: ServerData)
@@ -167,11 +224,10 @@ event Redis::server_data(c: connection, is_orig: bool, data: ServerData)
 		c$redis_state = s;
 		Conn::register_removal_hook(c, finalize_redis);
 		}
-	++c$redis_state$current_response;
+	c$redis_state$current_response = response_num(c);
 	set_state(c, F);
 
 	c$redis_resp$response = data;
-	# TODO: Do stuff with pending so that finalize_redis and pipelining work
 	Log::write(Redis::LOG, c$redis_resp);
 	delete c$redis_state$pending[c$redis_state$current_response];
 	}
@@ -185,10 +241,7 @@ hook finalize_redis(c: connection)
 			{
 			# We don't use pending elements at index 0.
 			if ( r == 0 ) next;
-			#Log::write(HTTP::LOG, info);
 			Log::write(Redis::LOG, info);
-			#delete c$redis_resp;
 			}
 		}
 	}
-
