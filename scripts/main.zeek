@@ -117,46 +117,30 @@ function new_redis_session(c: connection): Info
 	return Info($ts=network_time(), $uid=c$uid, $id=c$id);
 	}
 
+function make_new_state(c: connection)
+	{
+	local s: State;
+	c$redis_state = s;
+	Conn::register_removal_hook(c, finalize_redis);
+	}
+
 function set_state(c: connection, is_orig: bool)
 	{
-	if ( ! c?$redis_state )
-		{
-		local s: State;
-		c$redis_state = s;
-		Conn::register_removal_hook(c, finalize_redis);
-		}
+	if ( ! c?$redis_state ) make_new_state(c);
 
-	if ( is_orig )
-		{
-		if ( c$redis_state$current_request !in c$redis_state$pending )
-			c$redis_state$pending[c$redis_state$current_request] = new_redis_session(c);
+	local current: count;
+	if ( is_orig ) current = c$redis_state$current_request;
+	else current = c$redis_state$current_response;
 
-		c$redis_resp = c$redis_state$pending[c$redis_state$current_request];
-		}
-	else
-		{
-		if ( c$redis_state$current_response !in c$redis_state$pending )
-			c$redis_state$pending[c$redis_state$current_response] = new_redis_session(c);
+	if ( current !in c$redis_state$pending )
+		c$redis_state$pending[current] = new_redis_session(c);
 
-		c$redis_resp = c$redis_state$pending[c$redis_state$current_response];
-		}
+	c$redis_resp = c$redis_state$pending[current];
 	}
 
 event Redis::command(c: connection, is_orig: bool, command: Command)
 	{
-	#hook set_session(c, command);
-
-	# TODO: We need to care about whether the reply was suppressed with
-	# CLIENT REPLY [OFF|SKIP]
-	#local info = c$redis_resp;
-	#emit_log(c);
-	# TODO refactor this since it's used a couple times
-	if ( ! c?$redis_state )
-		{
-		local s: State;
-		c$redis_state = s;
-		Conn::register_removal_hook(c, finalize_redis);
-		}
+	if ( ! c?$redis_state ) make_new_state(c);
 
 	++c$redis_state$current_request;
 	if ( command?$known && command$known == KnownCommand_CLIENT )
@@ -218,12 +202,8 @@ function response_num(c: connection): count
 
 event Redis::server_data(c: connection, is_orig: bool, data: ServerData)
 	{
-	if ( ! c?$redis_state )
-		{
-		local s: State;
-		c$redis_state = s;
-		Conn::register_removal_hook(c, finalize_redis);
-		}
+	if ( ! c?$redis_state ) make_new_state(c);
+
 	c$redis_state$current_response = response_num(c);
 	set_state(c, F);
 
