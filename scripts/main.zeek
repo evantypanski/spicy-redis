@@ -82,10 +82,12 @@ export {
 		no_response_ranges: vector of vector of count;
 	};
 
+	# Redis specifically mentions 10k commands as a good pipelining threshold, so
+	# we'll piggyback on that.
+	option max_pending_requests = 10000;
 }
 
 redef record connection += {
-	# TODO: Rename
 	redis: Info &optional;
 	redis_state: State &optional;
 };
@@ -141,6 +143,24 @@ function set_state(c: connection, is_orig: bool)
 event Redis::command(c: connection, is_orig: bool, command: Command)
 	{
 	if ( ! c?$redis_state ) make_new_state(c);
+
+	if ( max_pending_requests > 0 && |c$redis_state$pending| > max_pending_requests )
+		{
+		Reporter::conn_weird("Redis_excessive_pipelining", c);
+
+		# Just spit out what we have
+		# TODO: Doesn't this mess it up if we later get the responses? :/
+		while ( c$redis_state$current_response < c$redis_state$current_request )
+			{
+			local cr = c$redis_state$current_response;
+			if ( cr in c$redis_state$pending )
+				{
+				Log::write(Redis::LOG, c$redis_state$pending[cr]);
+				delete c$redis_state$pending[cr];
+				}
+			++c$redis_state$current_response;
+			}
+		}
 
 	++c$redis_state$current_request;
 	if ( command?$known && command$known == KnownCommand_CLIENT )
