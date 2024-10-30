@@ -86,7 +86,7 @@ export {
 
 redef record connection += {
 	# TODO: Rename
-	redis_resp: Info &optional;
+	redis: Info &optional;
 	redis_state: State &optional;
 };
 
@@ -135,7 +135,7 @@ function set_state(c: connection, is_orig: bool)
 	if ( current !in c$redis_state$pending )
 		c$redis_state$pending[current] = new_redis_session(c);
 
-	c$redis_resp = c$redis_state$pending[current];
+	c$redis = c$redis_state$pending[current];
 	}
 
 event Redis::command(c: connection, is_orig: bool, command: Command)
@@ -178,7 +178,7 @@ event Redis::command(c: connection, is_orig: bool, command: Command)
 		}
 	set_state(c, T);
 
-	c$redis_resp$cmd = command;
+	c$redis$cmd = command;
 	}
 
 ## Gets the next response number based on a connection. This is necessary since
@@ -207,8 +207,8 @@ event Redis::server_data(c: connection, is_orig: bool, data: ServerData)
 	c$redis_state$current_response = response_num(c);
 	set_state(c, F);
 
-	c$redis_resp$response = data;
-	Log::write(Redis::LOG, c$redis_resp);
+	c$redis$response = data;
+	Log::write(Redis::LOG, c$redis);
 	delete c$redis_state$pending[c$redis_state$current_response];
 	}
 
