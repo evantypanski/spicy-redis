@@ -2,7 +2,7 @@
 #
 # @TEST-EXEC: zeek -Cr ${TRACES}/django-cache.trace ${PACKAGE} %INPUT >output
 # @TEST-EXEC: btest-diff output
-# @TEST-EXEC: btest-diff resp.log
+# @TEST-EXEC: btest-diff redis.log
 
 event Redis::set_command(c: connection, is_orig: bool, command: Redis::SetCommand)
     {

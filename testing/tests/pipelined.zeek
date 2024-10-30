@@ -2,7 +2,7 @@
 #
 # @TEST-EXEC: zeek -Cr ${TRACES}/pipelining-example.trace ${PACKAGE} %INPUT >output
 # @TEST-EXEC: btest-diff output
-# @TEST-EXEC: btest-diff resp.log
+# @TEST-EXEC: btest-diff redis.log
 
 # Testing the example of "pipelining" in REDIS docs:
 # https://redis.io/docs/latest/develop/use/pipelining/

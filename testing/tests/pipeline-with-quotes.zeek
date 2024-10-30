@@ -2,7 +2,7 @@
 #
 # @TEST-EXEC: zeek -Cr ${TRACES}/pipeline-quotes.trace ${PACKAGE} %INPUT >output
 # @TEST-EXEC: btest-diff output
-# @TEST-EXEC: btest-diff resp.log
+# @TEST-EXEC: btest-diff redis.log
 # TODO: Make it so weird.log exists again with `zeek::weird` for inline commands
 # btest-diff weird.log
 
