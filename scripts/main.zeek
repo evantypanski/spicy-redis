@@ -140,6 +140,12 @@ function set_state(c: connection, is_orig: bool)
 	c$redis = c$redis_state$pending[current];
 	}
 
+# Returns true if the last interval exists and is closed
+function is_last_interval_closed(c: connection): bool
+	{
+	return |c$redis_state$no_response_ranges| == 0 || |c$redis_state$no_response_ranges[|c$redis_state$no_response_ranges| - 1]| != 1;
+	}
+
 event Redis::command(c: connection, is_orig: bool, command: Command)
 	{
 	if ( ! c?$redis_state ) make_new_state(c);
@@ -183,16 +189,15 @@ event Redis::command(c: connection, is_orig: bool, command: Command)
 			if ( to_lower(command$raw[2]) == "off" )
 				{
 				# Only add a new interval if the last one is closed
-				if  ( |c$redis_state$no_response_ranges| == 0 || |c$redis_state$no_response_ranges[|c$redis_state$no_response_ranges| - 1]| != 1)
+				if  ( is_last_interval_closed(c) )
 					{
 					c$redis_state$no_response_ranges += vector(c$redis_state$current_request);
 					}
 				}
 			if ( to_lower(command$raw[2]) == "skip" )
 				{
-				# TODO: Test logic here, what if it's off the skip - does it close the
-				# next one? For now this just introduces a new range of length 1
-				c$redis_state$no_response_ranges += vector(c$redis_state$current_request, c$redis_state$current_request + 1);
+				if  ( is_last_interval_closed(c) )
+					c$redis_state$no_response_ranges += vector(c$redis_state$current_request, c$redis_state$current_request + 1);
 				}
 			}
 		}
