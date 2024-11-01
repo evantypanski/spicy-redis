@@ -2,11 +2,24 @@
 
 Parses the [Redis serialization protocol](https://redis.io/docs/latest/develop/reference/protocol-spec/) (RESP). Then parses this as Redis commands
 
-## Usage
+## Installation
 
-Common usage within Zeek.
+Install using the [Zeek package manager](https://docs.zeek.org/projects/package-manager/en/stable/), `zkg`:
 
-First, build the analyzer:
+```
+zkg install https://github.com/evantypanski/spicy-redis
+```
+
+Check to ensure it installed properly:
+
+```
+$ zeek -NN | grep spicy_Redis
+    [Analyzer] spicy_Redis (ANALYZER_SPICY_REDIS, enabled)
+```
+
+### From source
+
+You can also build from source directly from this directory, then install the local version:
 
 ```
 $ mkdir build && cd build
@@ -14,11 +27,14 @@ $ cmake .. -G Ninja
 $ ninja install
 ```
 
-You should now see the spicy analyzer via `zeek`:
+## Usage
+
+I'm not entirely clear how the script is expected to get loaded. For now, the easiest way to use this via Zeek is by directly loading the `main.zeek` script in a `zeek` invocation, like:
 
 ```
-$ zeek -NN | grep Redis
-    [Analyzer] spicy_redis (ANALYZER_SPICY_REDIS, enabled)
+$ zeek -Cr testing/Traces/set.trace scripts/main.zeek
+$ cat redis.log
+# ... the log output should appear
 ```
 
 ### Creating Redis traffic
