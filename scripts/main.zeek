@@ -197,7 +197,8 @@ event Redis::command(c: connection, is_orig: bool, command: Command)
 			if ( to_lower(command$raw[2]) == "skip" )
 				{
 				if  ( is_last_interval_closed(c) )
-					c$redis_state$no_response_ranges += vector(c$redis_state$current_request, c$redis_state$current_request + 1);
+					# It skips this one and the next one
+					c$redis_state$no_response_ranges += vector(c$redis_state$current_request, c$redis_state$current_request + 2);
 				}
 			}
 		}
@@ -229,10 +230,29 @@ event Redis::server_data(c: connection, is_orig: bool, data: ServerData)
 	{
 	if ( ! c?$redis_state ) make_new_state(c);
 
+	local previous_response_num = c$redis_state$current_response;
 	c$redis_state$current_response = response_num(c);
 	set_state(c, F);
 
 	c$redis$response = data;
+	# Log each of the pending responses to this point - we will not go
+	# back.
+	while ( previous_response_num < c$redis_state$current_response )
+		{
+		if ( previous_response_num == 0 )
+			{
+			++previous_response_num;
+			next;
+			}
+
+		if ( previous_response_num in c$redis_state$pending )
+			{
+			Log::write(Redis::LOG, c$redis_state$pending[previous_response_num]);
+			delete c$redis_state$pending[previous_response_num];
+			}
+		previous_response_num += 1;
+		}
+	# Log this one
 	Log::write(Redis::LOG, c$redis);
 	delete c$redis_state$pending[c$redis_state$current_response];
 	}
