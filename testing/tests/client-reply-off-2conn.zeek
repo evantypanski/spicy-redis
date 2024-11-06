@@ -2,4 +2,3 @@
 #
 # @TEST-EXEC: zeek -Cr ${TRACES}/reply-off-on-2conn.trace ${PACKAGE} %INPUT >output
 # @TEST-EXEC: btest-diff redis.log
-
