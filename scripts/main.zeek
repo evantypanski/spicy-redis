@@ -261,7 +261,7 @@ event Redis::server_data(c: connection, is_orig: bool, data: ServerData)
 hook finalize_redis(c: connection)
 	{
 	# Flush all pending but incomplete request/response pairs.
-	if ( c?$redis_state )
+	if ( c?$redis_state && c$redis_state$current_response != 0 )
 		{
 		for ( r, info in c$redis_state$pending )
 			{
