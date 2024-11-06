@@ -26,6 +26,11 @@ export {
 		key: string &log;
 	};
 
+	type AuthCommand: record {
+		username: string &optional;
+		password: string;
+	};
+
 	type Command: record {
 		## The raw command, exactly as parsed
 		raw: vector of string;
