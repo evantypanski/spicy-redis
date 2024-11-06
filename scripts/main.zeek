@@ -85,6 +85,9 @@ export {
 		## Each range is one or two elements, one meaning it's unbounded, two meaning
 		## it begins at one and ends at the second.
 		no_response_ranges: vector of vector of count;
+		## We store if this analyzer had a violation to avoid logging if so.
+		## This should not be super necessary, but worth a shot.
+		violation: bool &default=F;
 	};
 
 	# Redis specifically mentions 10k commands as a good pipelining threshold, so
@@ -105,6 +108,20 @@ event zeek_init() &priority=5
 	    $policy=log_policy ]);
 
 	Analyzer::register_for_ports(Analyzer::ANALYZER_SPICY_REDIS, ports);
+	}
+
+event analyzer_violation_info(atype: AllAnalyzers::Tag, info: AnalyzerViolationInfo)
+	{
+	if ( atype == Analyzer::ANALYZER_SPICY_REDIS )
+		{
+		if ( info?$c )
+			{
+			if ( info$c?$redis_state )
+				{
+				info$c$redis_state$violation = T;
+				}
+			}
+		}
 	}
 
 function new_redis_session(c: connection): Info
@@ -261,7 +278,7 @@ event Redis::server_data(c: connection, is_orig: bool, data: ServerData)
 hook finalize_redis(c: connection)
 	{
 	# Flush all pending but incomplete request/response pairs.
-	if ( c?$redis_state && c$redis_state$current_response != 0 )
+	if ( c?$redis_state && ! c$redis_state$violation && c$redis_state$current_response != 0 )
 		{
 		for ( r, info in c$redis_state$pending )
 			{
