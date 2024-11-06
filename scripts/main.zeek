@@ -94,24 +94,12 @@ redef record connection += {
 
 redef likely_server_ports += { ports };
 
-# TODO: If you're going to send file data into the file analysis framework, you
-# need to provide a file handle function. This is a simple example that's
-# sufficient if the protocol only transfers a single, complete file at a time.
-#
-# function get_file_handle(c: connection, is_orig: bool): string
-#   {
-#   return cat(Analyzer::ANALYZER_SPICY_REDIS, c$start_time, c$id, is_orig);
-#   }
-
 event zeek_init() &priority=5
 	{
 	Log::create_stream(Redis::LOG, [ $columns=Info, $ev=log_resp, $path="redis",
 	    $policy=log_policy ]);
 
 	Analyzer::register_for_ports(Analyzer::ANALYZER_SPICY_REDIS, ports);
-
-	# TODO: To activate the file handle function above, uncomment this.
-	# Files::register_protocol(Analyzer::ANALYZER_SPICY_REDIS, [$get_file_handle=Redis::get_file_handle ]);
 	}
 
 function new_redis_session(c: connection): Info
@@ -155,7 +143,6 @@ event Redis::command(c: connection, is_orig: bool, command: Command)
 		Reporter::conn_weird("Redis_excessive_pipelining", c);
 
 		# Just spit out what we have
-		# TODO: Doesn't this mess it up if we later get the responses? :/
 		while ( c$redis_state$current_response < c$redis_state$current_request )
 			{
 			local cr = c$redis_state$current_response;
