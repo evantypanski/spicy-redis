@@ -169,18 +169,11 @@ event Redis::command(c: connection, is_orig: bool, command: Command)
 	    && |c$redis_state$pending| > max_pending_requests )
 		{
 		Reporter::conn_weird("Redis_excessive_pipelining", c);
-
-		# Just spit out what we have
-		while ( c$redis_state$current_response < c$redis_state$current_request )
-			{
-			local cr = c$redis_state$current_response;
-			if ( cr in c$redis_state$pending )
-				{
-				Log::write(Redis::LOG, c$redis_state$pending[cr]);
-				delete c$redis_state$pending[cr];
-				}
-			++c$redis_state$current_response;
-			}
+		# Delete the current state and restart later. We'll be in a weird state, but
+		# really we want to abort. I don't quite get how to register this as a
+		# violation. :)
+		delete c$redis_state;
+		return;
 		}
 
 	++c$redis_state$current_request;
