@@ -277,8 +277,13 @@ event Redis::server_data(c: connection, is_orig: bool, data: ServerData)
 
 hook finalize_redis(c: connection)
 	{
+	if ( c$redis_state$violation )
+		{
+		# If there's a violation, make sure everything gets deleted
+		delete c$redis_state;
+		}
 	# Flush all pending but incomplete request/response pairs.
-	if ( c?$redis_state && ! c$redis_state$violation && c$redis_state$current_response != 0 )
+	if ( c?$redis_state && c$redis_state$current_response != 0 )
 		{
 		for ( r, info in c$redis_state$pending )
 			{
