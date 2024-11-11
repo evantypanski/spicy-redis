@@ -110,7 +110,8 @@ event zeek_init() &priority=5
 	Analyzer::register_for_ports(Analyzer::ANALYZER_SPICY_REDIS, ports);
 	}
 
-event analyzer_violation_info(atype: AllAnalyzers::Tag, info: AnalyzerViolationInfo)
+event analyzer_violation_info(atype: AllAnalyzers::Tag,
+    info: AnalyzerViolationInfo)
 	{
 	if ( atype == Analyzer::ANALYZER_SPICY_REDIS )
 		{
@@ -225,7 +226,7 @@ function response_num(c: connection): count
 	for ( i in c$redis_state$no_response_ranges )
 		{
 		local range = c$redis_state$no_response_ranges[i];
-		assert |range| >= 1;
+		assert | range |  >= 1;
 		if ( |range| == 1 && resp_num > range[0] )
 			{ } # TODO: This is necessary if not using pipelining
 		if ( |range| == 2 && resp_num >= range[0] && resp_num < range[1] )
@@ -256,16 +257,20 @@ event Redis::server_data(c: connection, is_orig: bool, data: ServerData)
 			next;
 			}
 
-		if ( previous_response_num in c$redis_state$pending )
+		if ( previous_response_num in c$redis_state$pending &&
+		    c$redis_state$pending[previous_response_num]?$cmd )
 			{
 			Log::write(Redis::LOG, c$redis_state$pending[previous_response_num]);
 			delete c$redis_state$pending[previous_response_num];
 			}
 		previous_response_num += 1;
 		}
-	# Log this one
-	Log::write(Redis::LOG, c$redis);
-	delete c$redis_state$pending[c$redis_state$current_response];
+	# Log this one if we have the request and response
+	if ( c$redis?$cmd )
+		{
+		Log::write(Redis::LOG, c$redis);
+		delete c$redis_state$pending[c$redis_state$current_response];
+		}
 	}
 
 hook finalize_redis(c: connection)
