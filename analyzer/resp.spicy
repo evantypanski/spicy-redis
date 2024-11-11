@@ -155,10 +155,14 @@ type Set = unit {
     elements: Data[self.num_elements];
 };
 
-on Data::%done {
+on ServerData::%done {
     spicy::accept_input();
 }
 
-on Data::%error {
-    spicy::decline_input("error while parsing RESP data");
+on ServerData::%error {
+    spicy::decline_input("error while parsing RESP server data");
+}
+
+on ClientData::%error {
+    spicy::decline_input("error while parsing RESP client data");
 }
