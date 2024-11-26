@@ -9,7 +9,7 @@ import spicy;
 const MAX_SIZE = 1024 * 1024;
 
 public type ClientMessages = unit {
-    : (ClientData &synchronize)[];
+    : ClientData[];
 };
 
 public type ServerMessages = unit {
@@ -17,8 +17,6 @@ public type ServerMessages = unit {
 };
 
 public type ClientData = unit {
-    %synchronize-after = b"\x0d\x0a";
-
     on %init() { self.start = self.input(); }
 
     # Clients can only be an array or inline
@@ -161,8 +159,4 @@ on ServerData::%done {
 
 on ServerData::%error {
     spicy::decline_input("error while parsing RESP server data");
-}
-
-on ClientData::%error {
-    spicy::decline_input("error while parsing RESP client data");
 }
