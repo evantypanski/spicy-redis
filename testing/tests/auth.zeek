@@ -1,6 +1,6 @@
 # @TEST-DOC: Test Zeek with AUTH commands
 #
-# @TEST-EXEC: zeek -Cr ${TRACES}/auth.trace ${PACKAGE} %INPUT >output
+# @TEST-EXEC: zeek -Cr ${TRACES}/auth.pcap ${PACKAGE} %INPUT >output
 # @TEST-EXEC: btest-diff output
 
 event Redis::auth_command(c: connection, is_orig: bool,

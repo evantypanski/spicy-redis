@@ -1,6 +1,6 @@
 # @TEST-DOC: Test Zeek parsing SET commands
 #
-# @TEST-EXEC: zeek -Cr ${TRACES}/set.trace ${PACKAGE} %INPUT >output
+# @TEST-EXEC: zeek -Cr ${TRACES}/set.pcap ${PACKAGE} %INPUT >output
 # @TEST-EXEC: btest-diff output
 
 event Redis::set_command(c: connection, is_orig: bool,
