@@ -29,13 +29,15 @@ $ ninja install
 
 ## Usage
 
-I'm not entirely clear how the script is expected to get loaded. For now, the easiest way to use this via Zeek is by directly loading the `main.zeek` script in a `zeek` invocation, like:
+When installing this through `zkg`, the package's scripts will be available with `spicy-redis.git` - so you can run `zeek` with the scripts like:
 
 ```
-$ zeek -Cr testing/Traces/set.trace scripts/main.zeek
+$ zeek -Cr testing/Traces/set.trace spicy-redis.git
 $ cat redis.log
 # ... the log output should appear
 ```
+
+If it's elsewhere, check your `zkg` `script_dir`
 
 ### Creating Redis traffic
 
