@@ -10,6 +10,8 @@ const MAX_SIZE = 1024 * 1024;
 const MAX_RECURSION_DEPTH = 20;
 
 public type ClientMessages = unit {
+    # The context here refers to whether we saw client data first. It is a one-time switch,
+    # either we have seen client data or not.
     %context = bool;
     on %init {
         *self.context() = True;
@@ -21,7 +23,7 @@ public type ServerMessages = unit {
     %context = bool;
     on %init {
         if (!*self.context()) {
-            throw "Server responses must come after a client request is parsed";
+            throw "Server responses must come after a client request is seen";
         }
     }
     : (ServerData &synchronize)[];
