@@ -1,5 +1,8 @@
 # Spicy-based Redis analyzer
 
+> [!IMPORTANT]
+> This repository is archived, as it is now in Zeek: https://github.com/zeek/zeek/pull/4288
+
 Parses the [Redis serialization protocol](https://redis.io/docs/latest/develop/reference/protocol-spec/) (RESP). Then parses this as Redis commands
 
 ## Installation
